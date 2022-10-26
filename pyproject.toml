@@ -32,13 +32,13 @@ ipdb = "^0.13.9"
 poetry-dynamic-versioning = "^0.16.0"
 pre_commit = "^2.16.0"
 pytest = "^7.1.2"
-pytest-cov = "^3.0.0"
+pytest-cov = "^4.0.0"
 pytest-mock = "^3.7.0"
 
 [tool.coverage.run]
 branch = true
-omit = [
-    "tests/*",
+source = [
+    "lib/*.py",
 ]
 
 [tool.coverage.report]

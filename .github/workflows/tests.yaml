@@ -96,7 +96,7 @@ jobs:
         if: steps.check_test_files.outputs.files_exists == 'true'
         run: |
           source .venv/bin/activate
-          python -m pytest --cov=libs --cov-report term --cov-report xml --cov-config .coveragerc --junitxml=testresults.xml
+          python -m pytest --cov=lib --cov-report term --cov-report xml --cov-config .coveragerc --junitxml=testresults.xml
           coverage report
 
       - name: Upload coverage to Codecov
