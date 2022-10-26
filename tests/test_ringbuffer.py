@@ -1,3 +1,4 @@
+import pytest
 from ringbuffer import RingBuffer
 
 
@@ -49,3 +50,11 @@ def test_ring_buffer_various():
     assert len(ring_buffer) == 0
     assert ring_buffer.max_size == 3
     assert not ring_buffer.full
+
+
+def test_ring_buffer_invalid_size():
+    with pytest.raises(ValueError):
+        RingBuffer(0)
+
+    with pytest.raises(ValueError):
+        RingBuffer(-1)

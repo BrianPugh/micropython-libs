@@ -12,6 +12,8 @@ def test_watch_dict_init_dict():
     assert wd.modified is False
     assert wd["foo"] == "bar"
     assert wd["bloop"] == "bleep"
+    assert list(wd.keys()) == ["foo", "bloop"]
+    assert list(wd.values()) == ["bar", "bleep"]
 
 
 def test_watch_dict_insert_str():
@@ -48,6 +50,14 @@ def test_watch_dict_insert_nested():
     assert wd.modified is False
     assert wd["foo"].modified is False
 
+    wd["watchlist"] = WatchList()
+    wd["watchlist"].append(2)
+    assert wd["watchlist"] == [2]
+
+    wd["watchdict"] = WatchDict()
+    wd["watchdict"]["key"] = "value"
+    assert wd["watchdict"]["key"] == "value"
+
 
 def test_watch_list_init_default():
     wd = WatchList()
@@ -60,12 +70,21 @@ def test_watch_list_init_list():
     assert wd == ["foo", "bar"]
 
 
-def test_watch_list_append_str():
+def test_watch_list_append():
     wd = WatchList()
     assert wd.modified is False
 
     wd.append("foo")
     wd.append("bar")
+    assert wd.modified is True
+    assert wd == ["foo", "bar"]
+
+
+def test_watch_list_extend():
+    wd = WatchList()
+    assert wd.modified is False
+
+    wd.extend(["foo", "bar"])
     assert wd.modified is True
     assert wd == ["foo", "bar"]
 
@@ -165,6 +184,22 @@ def test_watch_list_merge():
     assert wl == [[1, 2, 3, "d"], [4, 5, 6, "h"], "i"]
 
 
+def test_invalid_merge_strategy():
+    wl = WatchList()
+    with pytest.raises(ValueError):
+        wl.merge([], strategy="foo")
+
+
+def test_incompatible_merge_dict():
+    # TODO
+    pass
+
+
+def test_incompatible_merge_list():
+    # TODO
+    pass
+
+
 def test_init(tmp_path):
     config = ConfigStore(tmp_path / "config.json", autosave=False)
     assert config.modified is False
@@ -190,6 +225,11 @@ def test_autosave(tmp_path, mocker):
     assert len(spy_save.call_args_list) == 3
     assert config.modified is False
 
+    config["foo"]["bar"] = 3
+    assert len(spy_save.call_args_list) == 4
+    assert config.modified is False
+
+    # Assigning same value to key should NOT trigger a save.
     config["foo"]["bar"] = 3
     assert len(spy_save.call_args_list) == 4
     assert config.modified is False
@@ -336,6 +376,7 @@ def test_freeze_schema(mocker, tmp_path):
 
     config["default_profile"] = 2
     config.freeze_schema()
+    assert config.frozen is True
 
     config["default_profile"] = 3  # OK: existing key, same dtype
 
@@ -357,3 +398,52 @@ def test_freeze_schema(mocker, tmp_path):
 
     with pytest.raises(FrozenError):
         config["profiles"].append(3)  # BAD: append
+
+
+def test_freeze_schema_non_recursive(mocker, tmp_path):
+    config_fn = tmp_path / "config.json"
+    config = ConfigStore(config_fn)
+
+    config.update(
+        {
+            "default_profile": 1,
+            "profiles": [
+                {
+                    "name": "Normal",
+                    "temperature": 100,
+                },
+                {
+                    "name": "Bold",
+                    "temperature": 110,
+                },
+            ],
+        }
+    )
+    assert isinstance(config["profiles"], WatchList)
+    assert isinstance(config["profiles"][0], WatchDict)
+
+    config["default_profile"] = 2
+    config.freeze_schema(recursive=False)
+    assert config.frozen is True
+
+    assert config["profiles"][0].frozen is False
+
+
+def test_config_store_incompatible_value_type(tmp_path):
+    config_fn = tmp_path / "config.json"
+    config = ConfigStore(config_fn)
+    with pytest.raises(ValueError):
+        config["foo"] = b"bytes"
+
+
+def test_config_store_incompatible_key_type(tmp_path):
+    config_fn = tmp_path / "config.json"
+    config = ConfigStore(config_fn)
+    with pytest.raises(ValueError):
+        config[5] = b"bytes"
+
+
+def test_config_store_incompatible_file_extension(tmp_path):
+    config_fn = tmp_path / "config.txt"
+    with pytest.raises(ValueError):
+        ConfigStore(config_fn)

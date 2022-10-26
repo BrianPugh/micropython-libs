@@ -246,8 +246,6 @@ class WatchList(WatchBase):
                     self.append(other_val)
                     continue
                 _common_merge(i, existing, other_val, strategy=strategy)
-        elif strategy == "theirs":
-            raise NotImplementedError
         else:
             raise NotImplementedError
 
@@ -287,8 +285,6 @@ class WatchDict(WatchBase):
                     _common_merge(key, self[key], value, strategy=strategy)
                 else:
                     self[key] = value
-        elif strategy == "theirs":
-            raise NotImplementedError
         else:
             raise NotImplementedError
 

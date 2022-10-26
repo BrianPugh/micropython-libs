@@ -60,6 +60,9 @@ exclude_lines = [
     "if 0:",
     "if False:",
     "if __name__ == .__main__.:",
+
+    # Don't complain about import workarounds
+    "except ImportError:",
 ]
 
 [tool.bandit]
