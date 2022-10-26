@@ -19,14 +19,14 @@ class RingBuffer:
             +--------+----------------+------+
             | dtype  | C Type         | Size |
             +========+================+======+
-            | b'     | signed char    | 1    |
-            | B'     | unsigned char  | 1    |
-            | h'     | signed short   | 2    |
-            | H'     | unsigned short | 2    |
-            | i'     | signed int     | 2    |
-            | I'     | unsigned int   | 2    |
-            | l'     | signed long    | 4    |
-            | L'     | unsigned long  | 4    |
+            | 'b'    | signed char    | 1    |
+            | 'B'    | unsigned char  | 1    |
+            | 'h'    | signed short   | 2    |
+            | 'H'    | unsigned short | 2    |
+            | 'i'    | signed int     | 2    |
+            | 'I'    | unsigned int   | 2    |
+            | 'l'    | signed long    | 4    |
+            | 'L'    | unsigned long  | 4    |
             +--------+----------------+------+
         """
         if size <= 0:

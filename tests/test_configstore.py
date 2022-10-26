@@ -191,13 +191,17 @@ def test_invalid_merge_strategy():
 
 
 def test_incompatible_merge_dict():
-    # TODO
-    pass
+    wd = WatchDict()
+    assert wd.modified is False
+    wd["foo1"] = {"bar1": {"baz1": "bop1"}}
+    with pytest.raises(ValueError):
+        wd.merge({"foo1": 5})
 
 
 def test_incompatible_merge_list():
-    # TODO
-    pass
+    wl = WatchList([1, 2, ["a", "b"]])
+    with pytest.raises(ValueError):
+        wl.merge([4, 5, 6])
 
 
 def test_init(tmp_path):

@@ -203,12 +203,12 @@ class WatchBase:
 
 
 def _common_merge(key, existing_val, other_val, strategy):
-    if isinstance(other_val, (dict, WatchDict)):
-        if not isinstance(existing_val, WatchDict):
+    if isinstance(existing_val, WatchDict):
+        if not isinstance(other_val, (dict, WatchDict)):
             raise ValueError(f'Existing value for index "{key}" is not expected dict.')
         existing_val.merge(other_val, strategy=strategy)
-    elif isinstance(other_val, (list, WatchList)):
-        if not isinstance(existing_val, WatchList):
+    elif isinstance(existing_val, WatchList):
+        if not isinstance(other_val, (list, WatchList)):
             raise ValueError(f'Existing value for index "{key}" is not expected list.')
         existing_val.merge(other_val, strategy=strategy)
 
