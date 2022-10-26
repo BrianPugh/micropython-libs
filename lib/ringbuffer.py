@@ -16,18 +16,23 @@ class RingBuffer:
             Size of RingBuffer.
         dtype: str
             Type code for what each element represents.
-            +--------+----------------+------+
-            | dtype  | C Type         | Size |
-            +========+================+======+
-            | 'b'    | signed char    | 1    |
-            | 'B'    | unsigned char  | 1    |
-            | 'h'    | signed short   | 2    |
-            | 'H'    | unsigned short | 2    |
-            | 'i'    | signed int     | 2    |
-            | 'I'    | unsigned int   | 2    |
-            | 'l'    | signed long    | 4    |
-            | 'L'    | unsigned long  | 4    |
-            +--------+----------------+------+
+            Defaults to ``"f"`` for float.
+            +--------+--------------------+------+
+            | dtype  | C Type             | Size |
+            +========+====================+======+
+            | 'b'    | signed char        | 1    |
+            | 'B'    | unsigned char      | 1    |
+            | 'h'    | signed short       | 2    |
+            | 'H'    | unsigned short     | 2    |
+            | 'i'    | signed int         | 2    |
+            | 'I'    | unsigned int       | 2    |
+            | 'l'    | signed long        | 4    |
+            | 'L'    | unsigned long      | 4    |
+            | 'q'    | signed long long   | 8    |
+            | 'Q'    | unsigned long long | 8    |
+            | 'f'    | float (DEFAULT)    | 4    |
+            | 'd'    | double             | 8    |
+            +--------+--------------------+------+
         """
         if size <= 0:
             raise ValueError
