@@ -1,4 +1,4 @@
-|Python compat| |PyPi| |GHA tests| |Codecov report| |readthedocs|
+|Python compat| |PyPi| |GHA tests| |Codecov report|
 
 .. inclusion-marker-do-not-remove
 
@@ -14,9 +14,6 @@ a micropython target. See ``lib/``.
 .. |Codecov report| image:: https://codecov.io/github/BrianPugh/micropython-libs/coverage.svg?branch=main
    :target: https://codecov.io/github/BrianPugh/micropython-libs?branch=main
    :alt: Coverage
-.. |readthedocs| image:: https://readthedocs.org/projects/micropython-libs/badge/?version=latest
-        :target: https://micropython-libs.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
 .. |Python compat| image:: https://img.shields.io/badge/>=python-3.8-blue.svg
 .. |PyPi| image:: https://img.shields.io/pypi/v/libs.svg
         :target: https://pypi.python.org/pypi/libs
