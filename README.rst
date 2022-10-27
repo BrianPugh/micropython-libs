@@ -15,6 +15,9 @@ Contents
 
 * ``interp1d`` - One dimensional interpolation functions.
 
+* ``oversample`` - Oversample a sensor to improve the SNR and measurement resolution
+  at the cost of increased CPU utilization and reduced throughput.
+
 * ``ringbuffer`` - RingBuffer with builtin statistical methods.
 
 Installation
