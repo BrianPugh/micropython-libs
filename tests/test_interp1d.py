@@ -102,6 +102,19 @@ def test_monospline_interpolate(v, expected):
     assert pytest.approx(expected, 0.01) == interpolater(v)
 
 
+def test_monospline_interpolate_mono_positive():
+    x = y = [1, 2, 3, 4, 5, 6]
+    interpolater = interp1d.MonoSpline(x, y)
+    assert pytest.approx(3, 0.01) == interpolater(3)
+
+
+def test_monospline_interpolate_mono_negative():
+    x = [1, 2, 3, 4, 5, 6]
+    y = [-1, -2, -3, -4, -5, -6]
+    interpolater = interp1d.MonoSpline(x, y)
+    assert pytest.approx(-3, 0.01) == interpolater(3)
+
+
 @pytest.mark.skip(reason="visualization")
 def test_monospline_interpolate_visual():
     x = [0, 1, 2, 3, 5, 8, 13]
