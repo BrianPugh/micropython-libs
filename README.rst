@@ -6,7 +6,16 @@ micropython-libs
 ================
 
 This repository contains a collection of single-file libraries intended for
-a micropython target. See ``lib/``.
+a micropython target.
+
+Contents
+========
+
+* ``configstore`` - Persistent key-value store.
+
+* ``interp1d`` - One dimensional interpolation functions.
+
+* ``ringbuffer`` - RingBuffer with builtin statistical methods.
 
 .. |GHA tests| image:: https://github.com/BrianPugh/micropython-libs/workflows/tests/badge.svg
    :target: https://github.com/BrianPugh/micropython-libs/actions?query=workflow%3Atests
