@@ -21,15 +21,13 @@ def debounced(pin):
 
     count = 0
 
-    def handler(val):
-        if not val:
-            return
+    def handler(pin):
         nonlocal count
         count += 1
         print(count)
 
-    pin = Pin(pin, Pin.IN, Pin.PULL_UP)
-    debounced = DebouncedPin(pin, handler)  # noqa: F841
+    pin = DebouncedPin(pin, Pin.PULL_UP)
+    pin.irq(handler, DebouncedPin.IRQ_FALLING)
 
     while True:
         time.sleep(1)
