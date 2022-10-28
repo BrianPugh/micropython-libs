@@ -41,6 +41,9 @@ branch = true
 source = [
     "lib/*.py",
 ]
+omit = [
+    "lib/debouncedpin.py",
+]
 
 [tool.coverage.report]
 exclude_lines = [
