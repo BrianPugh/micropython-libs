@@ -20,6 +20,7 @@ packages = [{include = "lib"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+belay = "^0.10.0"
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "~4.5.0"
@@ -39,6 +40,9 @@ pytest-mock = "^3.7.0"
 branch = true
 source = [
     "lib/*.py",
+]
+omit = [
+    "lib/debouncedpin.py",
 ]
 
 [tool.coverage.report]
