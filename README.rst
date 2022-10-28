@@ -13,6 +13,8 @@ Contents
 
 * ``configstore`` - Persistent key-value store.
 
+* ``debouncedpin`` - Debounced ``Pin`` drop-in that automatically handles switch debouncing.
+
 * ``interp1d`` - One dimensional interpolation functions.
 
 * ``oversample`` - Oversample a sensor to improve the SNR and measurement resolution
