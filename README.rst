@@ -20,6 +20,10 @@ Contents
 * ``oversample`` - Oversample a sensor to improve the SNR and measurement resolution
   at the cost of increased CPU utilization and reduced throughput.
 
+* ``pid`` - PID controller and PID autotuner. Recommended for relatively slow processes (not a quadcopter).
+
+* ``pidautotune`` - Autotune for PID controllers. Autotuner results are mediocre; recommend manual tuning of PID parameters instead.
+
 * ``ringbuffer`` - RingBuffer with builtin statistical methods.
 
 Installation

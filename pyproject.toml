@@ -35,6 +35,8 @@ pre_commit = "^2.16.0"
 pytest = "^7.1.2"
 pytest-cov = "^4.0.0"
 pytest-mock = "^3.7.0"
+matplotlib = "^3.6.1"
+numpy = "^1.23.4"
 
 [tool.coverage.run]
 branch = true
@@ -72,6 +74,8 @@ exclude_lines = [
 [tool.bandit]
 exclude_dirs = [
     "tests",
+    "demos",
+    "sim",
 ]
 
 [tool.pyright]

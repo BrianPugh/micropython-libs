@@ -112,7 +112,7 @@ repos:
           - flake8-implicit-str-concat
 
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.276
+    rev: v1.1.277
     hooks:
       - id: pyright
         exclude: ^(demos/|lib/debouncedpin\.py)
