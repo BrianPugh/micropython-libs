@@ -1,16 +1,13 @@
 """Abstractions for controlling a dynamic system.
 
 Dependencies:
-    * ringbuffer
-    * pid
 
 Optional dependencies:
-    * pidautotune
+    * ``ringbuffer`` if ``Derivative`` is used.
+    * ``pid`` if ``ControlLoop`` class is used.
+    * ``pidautotune`` if autotune capabilities of ``ControlLoop`` are used.
 """
 import time
-
-from pid import PID
-from ringbuffer import RingBuffer
 
 try:
     import micropython  # pyright: ignore[reportMissingImports]
@@ -130,6 +127,8 @@ class Derivative(Sensor):
         sensor: Sensor
             sensor we want the derivative of.
         """
+        from ringbuffer import RingBuffer
+
         super().__init__(period=sensor.period)
         self._sensor = sensor
         self._buffer = RingBuffer(5)
@@ -187,21 +186,30 @@ class ControlLoop(Peripheral):
     MODE_NORMAL = const(0)
     MODE_AUTOTUNE = const(1)
 
-    def __init__(self, actuator, sensor):
+    def __init__(self, actuator, sensor, pid=(1.0, 0.0, 0.0)):
         """Create a control loop.
 
         Parameters
         ----------
         actuator: Actuator
         sensor: Optional[Sensor]
+        pid: Union[tuple, PID]
+            If a tuple, a PID object will be created from these tunings.
+            If a PID object, will directly be used.
         """
         self.actuator = check_type(actuator, Actuator)
         self.sensor = check_type(sensor, Sensor)
 
-        self.pid = PID(
-            output_limits=(0, 1),
-            period=max(actuator.period, sensor.period),
-        )
+        from pid import PID
+
+        if isinstance(pid, PID):
+            self.pid = pid
+        else:
+            self.pid = PID(
+                *pid,
+                output_limits=(0, 1),
+                period=max(actuator.period, sensor.period),
+            )
         self.autotuner = None
 
         self.set_mode_normal()
@@ -222,6 +230,13 @@ class ControlLoop(Peripheral):
     def set_mode_normal(self):
         self.pid.set_auto_mode(True)
         self.mode = self.MODE_NORMAL
+
+    @property
+    def tunings(self):
+        if self.mode == self.MODE_NORMAL:
+            return self.pid.tunings
+        else:
+            raise Exception
 
     def compute_tunings(self, *args, **kwargs):
         if self.mode == self.MODE_NORMAL:
