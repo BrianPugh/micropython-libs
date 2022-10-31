@@ -34,6 +34,8 @@ class Peripheral:
     def __init__(self, period=None):
         """Abstract IO class.
 
+        Abstraction layer for any sensor (input) or actuator (output).
+
         Parameters
         ----------
         period: Optional[float]
@@ -48,6 +50,15 @@ class Peripheral:
         self._last_action_time = None
 
     def _should_perform_action(self):
+        """Enough has time has elapsed than an action should be performed.
+
+        Not idempotent; internally updates ``_last_action_time`` state.
+
+        Returns
+        -------
+        bool
+            ``True`` if an action should be performed.
+        """
         now = time_ms()
         if (
             self._last_action_time is None
@@ -77,12 +88,12 @@ class Sensor(Peripheral):
     def read(self):
         """Oversample sensor, and convert to appropriate value."""
         if self._should_perform_action():
-            val = sum(self.raw_read() for _ in range(self._samples))
+            val = sum(self._raw_read() for _ in range(self._samples))
             val /= self._samples
-            self._last_read = self.convert(val)
+            self._last_read = self._convert(val)
         return self._last_read
 
-    def raw_read(self):
+    def _raw_read(self):
         """Read sensor.
 
         To be implemented by subclass.
@@ -95,8 +106,8 @@ class Sensor(Peripheral):
         raise NotImplementedError
 
     @staticmethod
-    def convert(val):
-        """Convert raw-value from ``raw_read`` to a SI base unit float.
+    def _convert(val):
+        """Convert raw-value from ``_raw_read`` to a SI base unit float.
 
         Used to only call conversion once per oversample, rather than once per sample.
 
@@ -152,6 +163,14 @@ class Derivative(Sensor):
 
 class Actuator(Peripheral):
     def __init__(self, period=None):
+        """Abstract output actuator class.
+
+        Parameters
+        ----------
+        period: Optional[float]
+            Perform actual writes every this many seconds.
+            Calling ``write`` prior to this period will not perform a write.
+        """
         super().__init__(period=period)
 
     def write(self, val):
