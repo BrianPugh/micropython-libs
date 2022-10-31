@@ -266,7 +266,7 @@ class PIDAutotune(object):
             n_amplitudes = len(self._peaks) - 1
 
             # compute the average peak-to-peak amplitude
-            for i in range(0, n_amplitudes):
+            for i in range(n_amplitudes):
                 # peak-to-peak amplitude
                 amplitude_pp += abs(self._peaks[i] - self._peaks[i + 1])
             amplitude_pp /= n_amplitudes
@@ -289,9 +289,9 @@ class PIDAutotune(object):
                 ultimate_period += ticks_diff(
                     self._peak_timestamps[i + 2], self._peak_timestamps[i]
                 )
-            ultimate_period /= n_periods
             # Average period, convert milliseconds -> seconds
-            self._ultimate_period = ultimate_period / 1000.0
+            ultimate_period /= 1000 * n_periods
+            self._ultimate_period = ultimate_period
             raise AutotuneSuccess
         elif self._peak_count >= 2 * self.max_cycles:
             # if the autotune has not already converged, terminate
