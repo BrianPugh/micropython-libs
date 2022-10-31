@@ -64,7 +64,7 @@ class Peripheral:
         now = time_ms()
         if (
             self._last_action_time is None
-            or ticks_diff(now, self._last_action_time) > 1000 * self.period
+            or ticks_diff(now, self._last_action_time) >= 1000 * self.period
         ):
             self._last_action_time = now
             return True
@@ -187,13 +187,14 @@ class Actuator(Peripheral):
         -------
         None
         """
-        if self._should_perform_action():
-            if not (0 <= val <= 1):
-                raise ValueError
-            self.raw_write(val)
+        if not (0 <= val <= 1):
+            raise ValueError
 
-    def raw_write(self, val):
-        """Write ``val`` to actuator.
+        if self._should_perform_action():
+            self._raw_write(val)
+
+    def _raw_write(self, val):
+        """Perform actual write ``val`` to actuator.
 
         Parameters
         ----------
