@@ -8,8 +8,13 @@ from sim.watertank import WaterTank
 
 
 @pytest.fixture
-def mock_time(mocker):
+def mock_time_autotune(mocker):
     return MockTime.patch(mocker, "pidautotune.time_ms")
+
+
+@pytest.fixture
+def mock_time_pid(mocker):
+    return MockTime.patch(mocker, "pid.time_ms")
 
 
 def _simulate(mock_time, controller):
@@ -20,13 +25,13 @@ def _simulate(mock_time, controller):
     water_temperatures = [tank.temperature]
     ts = [0.0]
     power_percents = [0.0]
-    for time in range(20_000):
-        time *= 10  # time in mS
+    dt = 1  # milliseconds
+    for time in range(0, 200_000, dt):
         mock_time.time = time
 
         water_temperature = tank.heat_cool(
             max_power_kw * power_percent,
-            duration=0.01,  # 10 mS
+            duration=dt / 1000,
             heat_loss_factor=20,
         )
         try:
@@ -44,9 +49,11 @@ def _simulate(mock_time, controller):
     return ts, power_percents, water_temperatures, targets
 
 
-def test_pid_autotune(mock_time):
+def test_pid_autotune(mock_time_autotune, mock_time_pid):
     controller = PIDAutotune(setpoint=90, hysterisis=0.1)
-    ts, power_percents, water_temperatures, targets = _simulate(mock_time, controller)
+    ts, power_percents, water_temperatures, targets = _simulate(
+        mock_time_autotune, controller
+    )
 
     results = {}
     predicted_tuning_pid = {
@@ -62,7 +69,7 @@ def test_pid_autotune(mock_time):
         exp_res = results[tuning_rule] = {}
         pid = PID(*params)
         pid.setpoint = 90
-        ts, power_percents, water_temperatures, targets = _simulate(mock_time, pid)
+        ts, power_percents, water_temperatures, targets = _simulate(mock_time_pid, pid)
         exp_res["ts"] = ts
         exp_res["power_percents"] = power_percents
         exp_res["water_temperatures"] = water_temperatures

@@ -67,3 +67,25 @@ def test_pid_basic(mock_time, assert_array_equal):
     ts, power_percents, water_temperatures, targets = _simulate(mock_time, controller)
     _plot_simulation(ts, power_percents, water_temperatures, targets)
     assert_array_equal(np.array([ts, water_temperatures, power_percents]).transpose())
+
+    controller.components
+    controller.tunings = 1.0, 0.1, 0.0
+
+
+def test_pid_set_limits():
+    controller = PID(0.1146, 0.00027, 0.08, output_limits=None)
+    controller.setpoint = 90
+    _simulate(mock_time, controller)
+    with pytest.raises(ValueError):
+        # lower greater than higher
+        PID(output_limits=(1.0, 0.5))
+
+
+def test_pid_automode_off(mock_time):
+    controller = PID(0.1146, 0.00027, 0.08)
+    controller.setpoint = 90
+    controller.auto_mode = False
+    assert controller(20) is None
+
+    controller.auto_mode = True
+    assert controller(20) is not None

@@ -60,6 +60,12 @@ class RingBuffer:
             yield self[i]
 
     def __eq__(self, other):
+        try:
+            iter(other)
+        except TypeError:
+            # Not Iterable
+            return False
+
         if len(self) != len(other):
             return False
 

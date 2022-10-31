@@ -89,3 +89,4 @@ venv = ".venv"
 
 [tool.pytest.ini_options]
 pythonpath = "lib"
+addopts = "--cov-report=term-missing --cov=lib"
