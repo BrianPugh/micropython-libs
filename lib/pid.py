@@ -183,8 +183,7 @@ class PID(object):
             "setpoint={self.setpoint!r}, period={self.period!r}, "
             "output_limits={self.output_limits!r}, auto_mode={self.auto_mode!r}, "
             "proportional_on_measurement={self.proportional_on_measurement!r}, "
-            "differetial_on_measurement={self.differetial_on_measurement!r}, "
-            "error_map={self.error_map!r}"
+            "differetial_on_measurement={self.differetial_on_measurement!r} "
             ")"
         ).format(self=self)
 

@@ -13,6 +13,8 @@ Contents
 
 * ``configstore`` - Persistent key-value store.
 
+* ``controlhal`` - Abstractions for controlling a dynamic system. Easy PID control loops.
+
 * ``debouncedpin`` - Debounced ``Pin`` drop-in that automatically handles switch debouncing.
 
 * ``interp1d`` - One dimensional interpolation functions.
@@ -22,7 +24,7 @@ Contents
 
 * ``pid`` - PID controller and PID autotuner. Recommended for relatively slow processes (not a quadcopter).
 
-* ``pidautotune`` - Autotune for PID controllers. Autotuner results are mediocre; recommend manual tuning of PID parameters instead.
+* ``pidautotune`` - Autotune for PID controllers.
 
 * ``ringbuffer`` - RingBuffer with builtin statistical methods.
 
