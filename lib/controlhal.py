@@ -1,11 +1,49 @@
 """Abstractions for controlling a dynamic system.
 
-Dependencies:
-
 Optional dependencies:
     * ``ringbuffer`` if ``Derivative`` is used.
     * ``pid`` if ``ControlLoop`` class is used.
     * ``pidautotune`` if autotune capabilities of ``ControlLoop`` are used.
+
+Typical usecase:
+
+.. code-block:: python
+
+    import machine
+    from controlhal import Sensor, Actuator, ControlLoop
+
+
+    class Heater(Actuator):
+        def __init__(self, pin, period=None):
+            super().__init__(period=period)
+            self.pwm = machine.PWM(pin)
+
+        def _raw_write(self, val):
+            # 0 == off, 1023 == on
+            self.pwm.duty(round(val * 1023))
+
+
+    class Thermometer(Actuator):
+        def __init__(self, pin, period=None):
+            super().__init__(period=period)
+            self.adc = machine.ADC(pin)
+
+        def _raw_read(self, val):
+            # 0 == fully low-signal, 65535 = fully high-signal.
+            return self.adc.read_u16()
+
+        @staticmethod
+        def _convert(self, val):
+            # Example conversion from u16 from adc to celsius.
+            return 100 * (val / 65535) + 17
+
+
+    heater = Heater(12)
+    thermometer = Thermometer(0)
+    boiler = ControlLoop(heater, thermometer, pid=(0.1, 0.002, 0.08))
+    boiler.write(90)  # Assign setpoint to 90 degrees celsius
+    while True:
+        boiler()  # update feedback loop
 """
 import time
 
