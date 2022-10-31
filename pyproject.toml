@@ -70,7 +70,7 @@ exclude_lines = [
     # Don't complain about import workarounds
     "except ImportError:",
     "except ModuleNotFoundError:",
-    "if micropython",
+    "if micropython:",
 ]
 
 [tool.bandit]

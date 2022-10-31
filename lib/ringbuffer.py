@@ -54,6 +54,20 @@ class RingBuffer:
     def __repr__(self):
         return f"RingBuffer(size={self._max_size}, buffer={repr(self.buffer)})"
 
+    def __iter__(self):
+        """Iterate oldest to newest values."""
+        for i in range(len(self)):
+            yield self[i]
+
+    def __eq__(self, other):
+        if len(self) != len(other):
+            return False
+
+        for x, y in zip(self, other):
+            if x != y:
+                return False
+        return True
+
     @property
     def max_size(self):
         """Maximum number of elements in RingBuffer."""
@@ -79,6 +93,11 @@ class RingBuffer:
             If the RingBuffer is empty.
         """
         return sum(self.buffer[: self._size]) / self._size
+
+    def diff(self):
+        """Finite difference."""
+        for i in range(len(self) - 1):
+            yield self[i + 1] - self[i]
 
     def max(self):
         """Maximum of populated RingBuffer elements."""

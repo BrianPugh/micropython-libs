@@ -19,6 +19,11 @@ try:
 except ModuleNotFoundError:
     PID = None
 
+try:
+    from pidautotune import PIDAutotune
+except ModuleNotFoundError:
+    PIDAutotune = None
+
 if micropython:
     time_ms = time.ticks_ms  # pyright: ignore[reportGeneralTypeIssues]
     ticks_diff = time.ticks_diff  # pyright: ignore[reportGeneralTypeIssues]
@@ -149,21 +154,32 @@ class Derivative(Sensor):
 
         super().__init__(period=sensor.period)
         self._sensor = sensor
-        self._buffer = RingBuffer(5)
+        self._val_buffer = RingBuffer(5)
+        self._time_buffer = RingBuffer(5)
 
     def read(self):
         if self._should_perform_action():
-            buffer = self._buffer
-            buffer.append(self._sensor.read())
+            val_buffer, time_buffer = self._val_buffer, self._time_buffer
 
-            if self._buffer.full:
-                # Five-point stencil 1D Derivative
+            val_buffer.append(self._sensor.read())
+            time_buffer.append(time_ms())
+
+            if self._val_buffer.full:
+                # Five-point stencil 1D Derivative Approximation
+                dt4 = sum(
+                    ticks_diff(time_buffer[i + 1], time_buffer[i])
+                    for i in range(len(time_buffer) - 1)
+                )
+
+                # 5-point stencil has a denominator of 12h
+                # We sum the 4 time differences, so this becomes 3h
+                # To need to convert ms -> s, so this becomes 0.003h
                 self._last_read = (
-                    buffer[0]  # -2h
-                    - 8 * buffer[1]  # -1h
-                    + 8 * buffer[3]  # 1h
-                    - buffer[4]  # 2h
-                ) / (12 * self.period)
+                    val_buffer[0]  # -2h
+                    - 8 * val_buffer[1]  # -1h
+                    + 8 * val_buffer[3]  # 1h
+                    - val_buffer[4]  # 2h
+                ) / (0.003 * dt4)
 
         return self._last_read
 
@@ -246,9 +262,11 @@ class ControlLoop(Peripheral):
 
         See ``PIDAutotune`` for docs.
         """
+        if PIDAutotune is None:
+            raise ModuleNotFoundError("No module named 'pidautotune'")
+
         if self.mode == self.MODE_AUTOTUNE:
             raise Exception
-        from pidautotune import PIDAutotune
 
         self.mode = self.MODE_AUTOTUNE
         self.autotuner = PIDAutotune(setpoint, period=self.pid.period, **kwargs)
@@ -260,10 +278,7 @@ class ControlLoop(Peripheral):
 
     @property
     def tunings(self):
-        if self.mode == self.MODE_NORMAL:
-            return self.pid.tunings
-        else:
-            raise Exception
+        return self.pid.tunings
 
     def compute_tunings(self, *args, **kwargs):
         if self.mode == self.MODE_NORMAL:
@@ -278,7 +293,11 @@ class ControlLoop(Peripheral):
     def __eq__(self, other):
         if not isinstance(other, type(self)):
             return False
-        return self.actuator is other.actuator and self.sensor is other.sensor
+        return (
+            self.actuator is other.actuator
+            and self.sensor is other.sensor
+            and (self.tunings == other.tunings)
+        )
 
     def read(self):
         """Read sensor.
