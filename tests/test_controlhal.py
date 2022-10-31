@@ -1,11 +1,24 @@
 import pytest
 from common import MockTime
-from controlhal import Actuator, ControlLoop, Derivative, Sensor
+from controlhal import Actuator, ControlLoop, Derivative, Peripheral, Sensor
 
 
 @pytest.fixture
 def mock_time(mocker):
     return MockTime.patch(mocker, "controlhal.time_ms")
+
+
+def test_peripheral_default_period():
+    peripheral = Peripheral()
+    assert peripheral.period == 0.01
+
+
+def test_peripheral_invalid_period():
+    with pytest.raises(ValueError):
+        Peripheral(period=0)
+
+    with pytest.raises(ValueError):
+        Peripheral(period=-0.1)
 
 
 def test_sensor(mock_time):
@@ -73,12 +86,17 @@ def test_derivative(mock_time):
             self.n_raw_read += 1
             return self.n_raw_read
 
-    sensor = TestSensor(period=0.1)
+    sensor = TestSensor(period=0.01)
     derivative = Derivative(sensor)
 
     # First 4 reads should return no derivative while
     # the buffer fills.
     assert 0 == derivative.read()
+    assert len(derivative._val_buffer) == 1
+    assert (
+        0 == derivative.read()
+    )  # Second read at same time should not increase buffer.
+    assert len(derivative._val_buffer) == 1
     mock_time.time += 100
     assert 0 == derivative.read()
     mock_time.time += 100
@@ -133,12 +151,13 @@ def mock_pidautotune(mocker):
     return mocker.patch("controlhal.PIDAutotune")
 
 
-def test_control_loop(mock_pid, sensor, actuator):
+def test_control_loop_from_tuple(mock_pid, sensor, actuator):
     control_loop = ControlLoop(actuator, sensor)
 
     mock_pid.assert_called_once_with(1.0, 0.0, 0.0, output_limits=(0, 1), period=0.01)
     control_loop.pid.set_auto_mode.assert_called_once_with(True)
     assert control_loop.tunings == control_loop.pid.tunings
+    assert control_loop.compute_tunings() == control_loop.tunings
 
     control_loop.pid.side_effect = lambda x: 0.7
 
@@ -150,17 +169,44 @@ def test_control_loop(mock_pid, sensor, actuator):
     actuator._raw_write.assert_called_once_with(0.7)
 
 
+def test_control_loop_from_pid(mocker, mock_pid, sensor, actuator):
+    pid = mocker.MagicMock()
+    ControlLoop(actuator, sensor, pid=pid)
+    pid.set_auto_mode.assert_called_once()
+    mock_pid.assert_not_called()
+
+
 def test_control_loop_autotune(mock_pid, mock_pidautotune, sensor, actuator):
     control_loop = ControlLoop(actuator, sensor)
     control_loop.pid.set_auto_mode.assert_called_once_with(True)
 
     control_loop.set_mode_autotune(100)
+    mock_pidautotune.assert_called_once()
     control_loop.pid.set_auto_mode.assert_called_with(False)
+
+    # Since we are already in autotune mode;
+    # subsequent calls shouldn't do anything.
+    control_loop.set_mode_autotune(100)
+    mock_pidautotune.assert_called_once()
 
     control_loop.autotuner.side_effect = lambda x: 0.7
 
     control_loop()
     actuator._raw_write.assert_called_once_with(0.7)
+
+    control_loop.compute_tunings()
+    control_loop.autotuner.compute_tunings.assert_called_once()
+
+
+def test_control_loop_autotune_impossible_state(
+    mock_pid, mock_pidautotune, sensor, actuator
+):
+    control_loop = ControlLoop(actuator, sensor)
+    control_loop.mode = ControlLoop.MODE_AUTOTUNE
+    with pytest.raises(Exception):
+        control_loop()
+    with pytest.raises(Exception):
+        control_loop.compute_tunings()
 
 
 def test_control_loop_eq(actuator, sensor):
@@ -168,3 +214,4 @@ def test_control_loop_eq(actuator, sensor):
     control_loop2 = ControlLoop(actuator, sensor)
 
     assert control_loop1 == control_loop2
+    assert control_loop1 != 4

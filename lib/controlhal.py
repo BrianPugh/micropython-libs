@@ -241,7 +241,7 @@ class ControlLoop(Peripheral):
             If a PID object, will directly be used.
         """
         if PID is None:
-            raise ModuleNotFoundError("No module named 'pid'")
+            raise ModuleNotFoundError("No module named 'pid'")  # pragma: no cover
         self.actuator = check_type(actuator, Actuator)
         self.sensor = check_type(sensor, Sensor)
 
@@ -263,10 +263,12 @@ class ControlLoop(Peripheral):
         See ``PIDAutotune`` for docs.
         """
         if PIDAutotune is None:
-            raise ModuleNotFoundError("No module named 'pidautotune'")
+            raise ModuleNotFoundError(
+                "No module named 'pidautotune'"
+            )  # pragma: no cover
 
         if self.mode == self.MODE_AUTOTUNE:
-            raise Exception
+            return
 
         self.mode = self.MODE_AUTOTUNE
         self.autotuner = PIDAutotune(setpoint, period=self.pid.period, **kwargs)
