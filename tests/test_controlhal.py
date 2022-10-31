@@ -1,6 +1,6 @@
 import pytest
 from common import MockTime
-from controlhal import Actuator, Sensor
+from controlhal import Actuator, ControlLoop, Sensor
 
 
 @pytest.fixture
@@ -63,3 +63,30 @@ def test_actuator(mock_time):
     assert test_actuator.n_raw_write == 1
     test_actuator.write(0.5)
     assert test_actuator.n_raw_write == 1
+
+
+def test_control_loop(mocker):
+    mock_pid = mocker.patch("controlhal.PID")
+
+    class TestSensor(Sensor):
+        def _raw_read(self):
+            return 7
+
+    class TestActuator(Actuator):
+        _raw_write = mocker.MagicMock()
+
+    sensor = TestSensor()
+    actuator = TestActuator()
+
+    control_loop = ControlLoop(actuator, sensor)
+
+    mock_pid.assert_called_once_with(1.0, 0.0, 0.0, output_limits=(0, 1), period=0.01)
+    control_loop.pid.set_auto_mode.assert_called_once_with(True)
+    control_loop.pid.side_effect = lambda x: 0.7
+
+    assert control_loop.read() == 7
+    control_loop.write(17)
+    assert control_loop.setpoint == 17
+
+    control_loop()
+    actuator._raw_write.assert_called_once_with(0.7)

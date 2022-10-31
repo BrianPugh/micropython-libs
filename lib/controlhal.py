@@ -11,14 +11,19 @@ import time
 
 try:
     import micropython  # pyright: ignore[reportMissingImports]
-except ImportError:
+except ModuleNotFoundError:
     micropython = None
+
+try:
+    from pid import PID
+except ModuleNotFoundError:
+    PID = None
 
 if micropython:
     time_ms = time.ticks_ms  # pyright: ignore[reportGeneralTypeIssues]
     ticks_diff = time.ticks_diff  # pyright: ignore[reportGeneralTypeIssues]
     const = micropython.const
-else:
+else:  # pragma: no cover
     time_ms = lambda: int(round(time.monotonic_ns() / 1_000_000))  # noqa: E731
     ticks_diff = lambda x, y: x - y  # noqa: E731
     const = lambda x: x  # noqa: E731
@@ -219,19 +224,19 @@ class ControlLoop(Peripheral):
             If a tuple, a PID object will be created from these tunings.
             If a PID object, will directly be used.
         """
+        if PID is None:
+            raise ModuleNotFoundError("No module named 'pid'")
         self.actuator = check_type(actuator, Actuator)
         self.sensor = check_type(sensor, Sensor)
 
-        from pid import PID
-
-        if isinstance(pid, PID):
-            self.pid = pid
-        else:
+        if isinstance(pid, tuple):
             self.pid = PID(
                 *pid,
                 output_limits=(0, 1),
                 period=max(actuator.period, sensor.period),
             )
+        else:
+            self.pid = pid
         self.autotuner = None
 
         self.set_mode_normal()

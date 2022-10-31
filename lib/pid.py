@@ -14,7 +14,7 @@ except ImportError:
 if micropython:
     time_ms = time.ticks_ms  # pyright: ignore[reportGeneralTypeIssues]
     ticks_diff = time.ticks_diff  # pyright: ignore[reportGeneralTypeIssues]
-else:
+else:  # pragma: no cover
     time_ms = lambda: int(round(time.monotonic_ns() / 1_000_000))  # noqa: E731
     ticks_diff = lambda x, y: x - y  # noqa: E731
 

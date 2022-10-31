@@ -69,6 +69,8 @@ exclude_lines = [
 
     # Don't complain about import workarounds
     "except ImportError:",
+    "except ModuleNotFoundError:",
+    "if micropython",
 ]
 
 [tool.bandit]
