@@ -35,6 +35,8 @@ class Peripheral:
         """Abstract IO class.
 
         Abstraction layer for any sensor (input) or actuator (output).
+        Should probably **not** be directly subclassed by user code;
+        see ``Sensor`` and ``Actuator`` for most use-cases.
 
         Parameters
         ----------
