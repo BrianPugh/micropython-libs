@@ -1,25 +1,15 @@
 import matplotlib.pyplot as plt
 import pytest
+from common import MockTime
 from pid import PID
 from pidautotune import AutotuneSuccess, PIDAutotune
 
 from sim.watertank import WaterTank
 
 
-class MockTime:
-    def __init__(self, init=0):
-        self.time = 0
-        self.mock = None
-
-    def __call__(self):
-        return self.time
-
-
 @pytest.fixture
 def mock_time(mocker):
-    mock_time = MockTime()
-    mock_time.mock = mocker.patch("pidautotune.time_ms", side_effect=mock_time)
-    return mock_time
+    return MockTime.patch(mocker, "pidautotune.time_ms")
 
 
 def _simulate(mock_time, controller):
