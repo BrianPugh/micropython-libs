@@ -42,7 +42,6 @@ class PID(object):
         auto_mode=True,
         proportional_on_measurement=False,
         differetial_on_measurement=True,
-        error_map=None,
     ):
         """
         Initialize a new PID controller.
@@ -78,8 +77,6 @@ class PID(object):
         differetial_on_measurement: bool
             Whether the differential term should be calculated on
             the input directly rather than on the error (which is the traditional way).
-        error_map: Callable
-            Function to transform the error value in another constrained value.
         """
         self.k_p, self.k_i, self.k_d = k_p, k_i, k_d
         self.setpoint = setpoint
@@ -89,7 +86,6 @@ class PID(object):
         self._auto_mode = auto_mode
         self.proportional_on_measurement = proportional_on_measurement
         self.differetial_on_measurement = differetial_on_measurement
-        self.error_map = error_map
 
         self._proportional = 0
         self._integral = 0
@@ -103,7 +99,7 @@ class PID(object):
         self.output_limits = output_limits
         self.reset()
 
-    def __call__(self, input_, dt=None):
+    def __call__(self, input_):
         """
         Update the PID controller.
 
@@ -115,9 +111,6 @@ class PID(object):
         ----------
         input_: float
             Sensor value
-        dt: Optional[float]
-            If set, uses this value for timestep (milliseconds) instead of real time.
-            This can be used in simulations when simulation time is different from real time.
 
         Returns
         -------
@@ -129,11 +122,7 @@ class PID(object):
             return self._last_output
 
         now = time_ms()
-        if dt is None:
-            dt = ticks_diff(now, self._last_time)
-        elif dt < 0:
-            raise ValueError("dt has negative value {}, must be positive".format(dt))
-
+        dt = ticks_diff(now, self._last_time)
         dt /= 1000  # dt is now in seconds
 
         if (
@@ -152,10 +141,6 @@ class PID(object):
         d_error = error - (
             self._last_error if (self._last_error is not None) else error
         )
-
-        # Check if must map the error
-        if self.error_map is not None:
-            error = self.error_map(error)
 
         # Compute the proportional term
         if not self.proportional_on_measurement:
