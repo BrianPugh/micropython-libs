@@ -1,6 +1,13 @@
 import pytest
 from common import MockTime
-from controlhal import Actuator, ControlLoop, Derivative, Peripheral, Sensor
+from controlhal import (
+    Actuator,
+    ControlLoop,
+    Derivative,
+    Peripheral,
+    Sensor,
+    TimeProportionalActuator,
+)
 
 
 @pytest.fixture
@@ -215,3 +222,43 @@ def test_control_loop_eq(actuator, sensor):
 
     assert control_loop1 == control_loop2
     assert control_loop1 != 4
+
+
+@pytest.fixture
+def mock_timer(mocker):
+    return mocker.patch("controlhal.Timer")
+
+
+def test_time_proportional_actuator_basic(mocker, mock_timer, mock_time):
+    pin = mocker.MagicMock()
+
+    actuator = TimeProportionalActuator(pin=pin, period=10)
+    mock_timer.assert_called_once_with(-1)
+    # configure timer to execute callback once every 10mS
+    actuator._timer.init.assert_called_once_with(
+        period=100, callback=actuator._timer_callback
+    )
+
+    pin.assert_not_called()
+    actuator.write(0.7)
+    # Pin won't be activated yet; it will first wait for the 30% offtime.
+    pin.assert_not_called()
+
+    for t_ms in range(20_000):
+        mock_time.time = t_ms
+        if t_ms % 100 == 0:
+            actuator._timer_callback(actuator._timer)
+
+        if t_ms == 0 or t_ms == 2_999:
+            pin.assert_not_called()
+        if t_ms == 3_000 or t_ms == 9_999:
+            # Turns on for the first time
+            pin.assert_called_once_with(1)
+        if t_ms == 10_000 or t_ms == 12_999:
+            # Turns off
+            assert len(pin.call_args_list) == 2
+            assert pin.call_args_list[-1] == mocker.call(0)
+        if t_ms == 13_000 or t_ms == 19_999:
+            # Turns on for the second time.
+            assert len(pin.call_args_list) == 3
+            assert pin.call_args_list[-1] == mocker.call(1)
