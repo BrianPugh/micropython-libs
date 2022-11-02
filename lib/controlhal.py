@@ -302,11 +302,10 @@ class TimeProportionalActuator(Actuator):
         self.pin = pin
         self.invert = invert
 
-        self._setpoint = 0  # Percent in range [0, 1]
         self._period_ms = int(1000 * period)
-
+        self._setpoint = 0  # Percent in range [0, 1]
         self._last_action = False
-        self._last_action_ms = time_ms()
+        self._counter = 0
 
         self._timer = Timer(timer_id)  # pyright: ignore[reportOptionalCall]
         # period is in seconds; timer.init expects mS.
@@ -314,40 +313,23 @@ class TimeProportionalActuator(Actuator):
         self._timer.init(period=10 * period, callback=self._timer_callback)
 
     def _timer_callback(self, timer):
-        now = time_ms()
-
-        def _write(val):
-            if self._last_action != val:
-                self._raw_write(val)
-            self._last_action = val
-            self._last_action_ms = now
-
-        if self._setpoint <= 0:
-            _write(0)  # Always off
-        elif self._setpoint >= 1:
-            _write(1)  # Always on
+        if self._counter == 0:
+            # only activate on 0 to prevent rapid toggling if
+            # setpoint is increased as ~same-rate as counter.
+            if self._counter < self._setpoint:
+                if not self._last_action:
+                    self._raw_write(1)
+                    self._last_action = True
         else:
-            dt = ticks_diff(now, self._last_action_ms)
-            if dt >= self._period_ms:
-                _write(1)
-            else:
-                p = dt / self._period_ms
-                if self._last_action and p >= self._setpoint - _eps:
-                    _write(0)
-                elif not self._last_action and p >= (1 - self._setpoint - _eps):
-                    _write(1)
-                else:
-                    # No action needs to be performed
-                    pass
+            if self._last_action and self._counter >= self._setpoint:
+                self._raw_write(0)
+                self._last_action = False
+        self._counter = (self._counter + 1) % 100
 
     def write(self, val):
         if not (0 <= val <= 1):
             raise ValueError
-        val_changed = self._setpoint != val
-        self._setpoint = val
-        if val_changed:
-            # Force an update
-            self._timer_callback(self._timer)
+        self._setpoint = round(val * 100)
 
     def _raw_write(self, val):
         if self.pin is None:

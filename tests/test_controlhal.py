@@ -241,7 +241,7 @@ def test_time_proportional_actuator_basic(mocker, mock_timer, mock_time):
 
     pin.assert_not_called()
     actuator.write(0.7)
-    # Pin won't be activated yet; it will first wait for the 30% offtime.
+    # Pin won't be activated yet; it gets activated on counter tick.
     pin.assert_not_called()
 
     for t_ms in range(20_000):
@@ -249,16 +249,50 @@ def test_time_proportional_actuator_basic(mocker, mock_timer, mock_time):
         if t_ms % 100 == 0:
             actuator._timer_callback(actuator._timer)
 
-        if t_ms == 0 or t_ms == 2_999:
-            pin.assert_not_called()
-        if t_ms == 3_000 or t_ms == 9_999:
-            # Turns on for the first time
+        if t_ms == 0 or t_ms == 6_999:
             pin.assert_called_once_with(1)
-        if t_ms == 10_000 or t_ms == 12_999:
-            # Turns off
+        if t_ms == 7_000 or t_ms == 9_999:
             assert len(pin.call_args_list) == 2
             assert pin.call_args_list[-1] == mocker.call(0)
-        if t_ms == 13_000 or t_ms == 19_999:
-            # Turns on for the second time.
+        if t_ms == 10_000 or t_ms == 16_999:
             assert len(pin.call_args_list) == 3
             assert pin.call_args_list[-1] == mocker.call(1)
+        if t_ms == 17_000 or t_ms == 19_999:
+            assert len(pin.call_args_list) == 4
+            assert pin.call_args_list[-1] == mocker.call(0)
+
+
+def test_time_proportional_actuator_change(mocker, mock_timer, mock_time):
+    pin = mocker.MagicMock()
+
+    actuator = TimeProportionalActuator(pin=pin, period=10)
+    mock_timer.assert_called_once_with(-1)
+    # configure timer to execute callback once every 10mS
+    actuator._timer.init.assert_called_once_with(
+        period=100, callback=actuator._timer_callback
+    )
+
+    pin.assert_not_called()
+    actuator.write(0.7)
+    pin.assert_not_called()
+
+    for t_ms in range(20_000):
+        mock_time.time = t_ms
+
+        if t_ms == 300:
+            actuator.write(0.6)
+
+        if t_ms % 100 == 0:
+            actuator._timer_callback(actuator._timer)
+
+        if t_ms == 0 or t_ms == 5_999:
+            pin.assert_called_once_with(1)
+        if t_ms == 6_000 or t_ms == 9_999:
+            assert len(pin.call_args_list) == 2
+            assert pin.call_args_list[-1] == mocker.call(0)
+        if t_ms == 10_000 or t_ms == 15_999:
+            assert len(pin.call_args_list) == 3
+            assert pin.call_args_list[-1] == mocker.call(1)
+        if t_ms == 16_000 or t_ms == 19_999:
+            assert len(pin.call_args_list) == 4
+            assert pin.call_args_list[-1] == mocker.call(0)
