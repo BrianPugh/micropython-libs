@@ -32,7 +32,6 @@ Typical usecase:
             # 0 == fully low-signal, 65535 = fully high-signal.
             return self.adc.read_u16()
 
-        @staticmethod
         def _convert(self, val):
             # Example conversion from u16 from adc to celsius.
             return 100 * (val / 65535) + 17
@@ -161,8 +160,7 @@ class Sensor(Peripheral):
         """
         raise NotImplementedError
 
-    @staticmethod
-    def _convert(val):
+    def _convert(self, val):
         """Convert raw-value from ``_raw_read`` to a SI base unit float.
 
         Used to only call conversion once per oversample, rather than once per sample.
@@ -226,6 +224,33 @@ class Derivative(Sensor):
                 ) / (0.003 * dt4)
 
         return self._last_read
+
+
+class ADCSensor(Sensor):
+    def __init__(self, adc, m=1 / 65535, b=0.0, period=None):
+        """ADC Sensor.
+
+        Parameters
+        ----------
+        adc: machine.ADC
+            Configured ADC object.
+        m: float
+            Multiply the u16 adc reading by this.
+            Defaults to ``1/65535`` (normalizes reading to range [0, 1.0])
+        b : float
+            Add this to the reading after ``m`` is applied.
+            Defaults to ``0.0``.
+        """
+        super().__init__(period=period)
+        self.adc = adc
+        self.m = m
+        self.b = b
+
+    def _raw_read(self):
+        return self.adc.read_u16()
+
+    def _convert(self, val):
+        return val * self.m + self.b
 
 
 class Actuator(Peripheral):
@@ -355,6 +380,22 @@ class TimeProportionalActuator(Actuator):
         if self.invert:
             val = not val
         self.pin(val)
+
+
+class PWMActuator(Actuator):
+    def __init__(self, pwm, period=None):
+        """PWM Actuator.
+
+        Parameters
+        ----------
+        pwm: machine.PWM
+            Configured PWM object.
+        """
+        super().__init__(period=period)
+        self.pwm = pwm
+
+    def _raw_write(self, val):
+        self.pwm.duty_u16(round(val * 65535))
 
 
 class ControlLoop(Peripheral):
