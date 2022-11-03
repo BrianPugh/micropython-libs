@@ -11,7 +11,7 @@ a micropython target.
 Contents
 ========
 
-* ``configstore`` - Persistent key-value store.
+* ``configstore`` - Persistent auto-write key-value store.
 
 * ``controlhal`` - Abstractions for controlling a dynamic system. Easy PID control loops.
 
@@ -22,9 +22,9 @@ Contents
 * ``oversample`` - Oversample a sensor to improve the SNR and measurement resolution
   at the cost of increased CPU utilization and reduced throughput.
 
-* ``pid`` - PID controller and PID autotuner. Recommended for relatively slow processes (not a quadcopter).
+* ``pid`` - PID controller. Not recommended for fast processes (not for quadcopters). Recommended interface: ``controlhal``.
 
-* ``pidautotune`` - Autotune for PID controllers.
+* ``pidautotune`` - Autotune for PID controllers. Recommended interface: ``controlhal``.
 
 * ``ringbuffer`` - RingBuffer with builtin statistical methods.
 
