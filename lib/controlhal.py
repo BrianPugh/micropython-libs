@@ -63,13 +63,19 @@ except ModuleNotFoundError:
     PIDAutotune = None
 
 if micropython:
+    from machine import Timer  # pyright: ignore[reportMissingImports]
+
     time_ms = time.ticks_ms  # pyright: ignore[reportGeneralTypeIssues]
     ticks_diff = time.ticks_diff  # pyright: ignore[reportGeneralTypeIssues]
     const = micropython.const
 else:  # pragma: no cover
+    Timer = None
     time_ms = lambda: int(round(time.monotonic_ns() / 1_000_000))  # noqa: E731
     ticks_diff = lambda x, y: x - y  # noqa: E731
     const = lambda x: x  # noqa: E731
+
+# For mitigating floating-point nonsense
+_eps = const(1e-5)
 
 
 def check_type(obj, cls):
@@ -261,6 +267,77 @@ class Actuator(Peripheral):
             Value to write in range ``[0, 1]``.
         """
         raise NotImplementedError
+
+
+class TimeProportionalActuator(Actuator):
+    def __init__(self, pin=None, period=10.0, invert=False, timer_id=-1):
+        """Create a TimeProportionalActuator object.
+
+        Cycle actuators are for controlling binary actuators that have an associated switching cost.
+        For example, if a physical relay is controlling a heater, a cycle_period of 10s might
+        be chosen to extend the life of the relay. If 60% power is requested, then the relay
+        will be on for 6 consecutive seconds, then off for 4 consecutive seconds.
+
+        Parameter
+        ---------
+        pin: Optional[machine.Pin]
+            If provided, performs digital writes to it.
+            Provided ``Pin`` must be configured to ``Pin.OUT`` mode.
+        period: float
+            Time in seconds for a cycle.
+            Defaults to ``10.0`` seconds.
+            Minimum value is ``0.1``; if a faster ``cycle_period`` is desired, look into PWM.
+        timer_id : int
+            Physical Timer ID to use. Defaults to ``-1`` (virtual timer).
+        invert: bool
+            Invert writes to provided ``pin``.
+            I.e. device has ``0`` for on and ``1`` for off.
+            Does nothing if ``pin`` is not provided.
+        """
+        if period < 0.1:
+            raise ValueError("cycle_period must be at least 0.1 seconds.")
+
+        super().__init__(period=period)
+
+        self.pin = pin
+        self.invert = invert
+
+        self._period_ms = int(1000 * period)
+        self._setpoint = 0  # Percent in range [0, 1]
+        self._last_action = False
+        self._counter = 0
+
+        self._timer = Timer(timer_id)  # pyright: ignore[reportOptionalCall]
+        # period is in seconds; timer.init expects mS.
+        # This timer will execute 100 times per period.
+        self._timer.init(period=10 * period, callback=self._timer_callback)
+
+    def _timer_callback(self, timer):
+        if self._counter == 0:
+            # only activate on 0 to prevent rapid toggling if
+            # setpoint is increased as ~same-rate as counter.
+            if self._counter < self._setpoint:
+                if not self._last_action:
+                    self._raw_write(1)
+                    self._last_action = True
+        else:
+            if self._last_action and self._counter >= self._setpoint:
+                self._raw_write(0)
+                self._last_action = False
+        self._counter = (self._counter + 1) % 100
+
+    def write(self, val):
+        if not (0 <= val <= 1):
+            raise ValueError
+        self._setpoint = round(val * 100)
+
+    def _raw_write(self, val):
+        if self.pin is None:
+            return
+        val = bool(val)
+        if self.invert:
+            val = not val
+        self.pin(val)
 
 
 class ControlLoop(Peripheral):
