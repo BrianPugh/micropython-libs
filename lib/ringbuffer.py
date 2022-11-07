@@ -100,6 +100,18 @@ class RingBuffer:
         """
         return sum(self.buffer[: self._size]) / self._size
 
+    def median(self):
+        """Median of populated RingBuffer elements.
+
+        Raises
+        ------
+        ZeroDivisionError
+            If the RingBuffer is empty.
+        """
+        vals = sorted(self)
+        index, is_odd = len(vals) // 2, len(vals) % 2
+        return vals[index] if is_odd else (self[index] + self[index - 1]) / 2
+
     def diff(self):
         """Finite difference."""
         for i in range(len(self) - 1):

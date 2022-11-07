@@ -7,27 +7,37 @@ def test_ring_buffer_various():
     assert len(ring_buffer) == 0
     assert ring_buffer.max_size == 3
     assert not ring_buffer.full
+    with pytest.raises(ZeroDivisionError):
+        ring_buffer.mean()
+    with pytest.raises(ZeroDivisionError):
+        ring_buffer.median()
 
+    # [2,]
     ring_buffer.append(2)
     assert len(ring_buffer) == 1
     assert ring_buffer.mean() == 2
+    assert ring_buffer.median() == 2
     assert ring_buffer.max() == 2
     assert ring_buffer.min() == 2
     assert not ring_buffer.full
     assert ring_buffer[0] == 2
 
+    # [2, 4,]
     ring_buffer.append(4)
     assert len(ring_buffer) == 2
     assert ring_buffer.mean() == 3
+    assert ring_buffer.median() == 3
     assert ring_buffer.max() == 4
     assert ring_buffer.min() == 2
     assert not ring_buffer.full
     assert ring_buffer[0] == 2
     assert ring_buffer[1] == 4
 
+    # [2, 4, 6,]
     ring_buffer.append(6)
     assert len(ring_buffer) == 3
     assert ring_buffer.mean() == 4
+    assert ring_buffer.median() == 4
     assert ring_buffer.max() == 6
     assert ring_buffer.min() == 2
     assert ring_buffer.full
@@ -35,9 +45,11 @@ def test_ring_buffer_various():
     assert ring_buffer[1] == 4
     assert ring_buffer[2] == 6
 
+    # [4, 6, 8,]
     ring_buffer.append(8)
     assert len(ring_buffer) == 3
     assert ring_buffer.mean() == 6
+    assert ring_buffer.median() == 6
     assert ring_buffer.max() == 8
     assert ring_buffer.min() == 4
     assert ring_buffer.full
