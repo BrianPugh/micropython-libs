@@ -71,6 +71,16 @@ class Interpolater:
         """Calculate interpolated output value for input ``v``."""
         raise NotImplementedError
 
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
+
+    @classmethod
+    def from_dict(cls, d):
+        """Create Interpolater from dictionary mapping ``x`` to ``y``."""
+        x = sorted(d.keys())
+        y = [d[z] for z in x]
+        return cls(x, y)
+
 
 class Linear(Interpolater):
     """Simple linear interpolation."""

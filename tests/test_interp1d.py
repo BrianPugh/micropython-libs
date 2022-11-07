@@ -62,6 +62,12 @@ def test_interpolater_len():
     assert len(interpolater) == 3
 
 
+def test_interpolater_from_dict():
+    interpolater_list = interp1d.Interpolater([1, 2, 3], [4, 5, 6])
+    interpolater_dict = interp1d.Interpolater.from_dict({1: 4, 2: 5, 3: 6})
+    assert interpolater_list == interpolater_dict
+
+
 @pytest.mark.parametrize(
     "v, expected",
     [(0, 0), (0.3, 11.38), (1.7, 30.33), (2.7, 42.58), (7, 29.36), (13.0, 1)],
