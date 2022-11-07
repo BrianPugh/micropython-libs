@@ -239,7 +239,11 @@ class Actuator(Peripheral):
             Calling ``write`` prior to this period will not perform a write.
         """
         super().__init__(period=period)
-        self.setpoint = 0
+        self._setpoint = 0
+
+    @property
+    def setpoint(self):
+        return self._setpoint
 
     def write(self, val):
         """Write ``val`` to actuator.
@@ -257,8 +261,11 @@ class Actuator(Peripheral):
             raise ValueError
 
         if self._should_perform_action():
-            self.setpoint = val
+            self._setpoint = val
             self._raw_write(val)
+
+    def read(self):
+        return self.setpoint
 
     def _raw_write(self, val):
         """Perform actual write ``val`` to actuator.
@@ -305,7 +312,7 @@ class TimeProportionalActuator(Actuator):
         self.invert = invert
 
         self._period_ms = int(1000 * period)
-        self._setpoint = 0  # Integer percent in range [0, 100]
+        self._setpoint_int = 0  # Integer percent in range [0, 100]
         self._last_action = False
         self._counter = 0
 
@@ -316,22 +323,22 @@ class TimeProportionalActuator(Actuator):
 
     @property
     def setpoint(self):
-        return self._setpoint / 100
+        return self._setpoint_int / 100
 
     @setpoint.setter
     def setpoint(self, val):
-        self._setpoint = round(100 * val)
+        self._setpoint_int = round(100 * val)
 
     def _timer_callback(self, timer):
         if self._counter == 0:
             # only activate on 0 to prevent rapid toggling if
             # setpoint is increased as ~same-rate as counter.
-            if self._counter < self._setpoint:
+            if self._counter < self._setpoint_int:
                 if not self._last_action:
                     self._raw_write(1)
                     self._last_action = True
         else:
-            if self._last_action and self._counter >= self._setpoint:
+            if self._last_action and self._counter >= self._setpoint_int:
                 self._raw_write(0)
                 self._last_action = False
         self._counter = (self._counter + 1) % 100
