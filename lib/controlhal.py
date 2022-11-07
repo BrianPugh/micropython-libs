@@ -239,6 +239,7 @@ class Actuator(Peripheral):
             Calling ``write`` prior to this period will not perform a write.
         """
         super().__init__(period=period)
+        self.setpoint = 0
 
     def write(self, val):
         """Write ``val`` to actuator.
@@ -256,6 +257,7 @@ class Actuator(Peripheral):
             raise ValueError
 
         if self._should_perform_action():
+            self.setpoint = val
             self._raw_write(val)
 
     def _raw_write(self, val):
@@ -303,7 +305,7 @@ class TimeProportionalActuator(Actuator):
         self.invert = invert
 
         self._period_ms = int(1000 * period)
-        self._setpoint = 0  # Percent in range [0, 1]
+        self._setpoint = 0  # Integer percent in range [0, 100]
         self._last_action = False
         self._counter = 0
 
@@ -311,6 +313,14 @@ class TimeProportionalActuator(Actuator):
         # period is in seconds; timer.init expects mS.
         # This timer will execute 100 times per period.
         self._timer.init(period=10 * period, callback=self._timer_callback)
+
+    @property
+    def setpoint(self):
+        return self._setpoint / 100
+
+    @setpoint.setter
+    def setpoint(self, val):
+        self._setpoint = round(100 * val)
 
     def _timer_callback(self, timer):
         if self._counter == 0:
@@ -329,7 +339,7 @@ class TimeProportionalActuator(Actuator):
     def write(self, val):
         if not (0 <= val <= 1):
             raise ValueError
-        self._setpoint = round(val * 100)
+        self.setpoint = val
 
     def _raw_write(self, val):
         if self.pin is None:
