@@ -99,7 +99,7 @@ class Peripheral:
         """
         if period is None:
             period = 0.01
-        elif period <= 0:
+        elif period < 0:
             raise ValueError
         self.period = period
         self._last_action_time = None
@@ -193,6 +193,9 @@ class Derivative(Sensor):
             sensor we want the derivative of.
         """
         from ringbuffer import RingBuffer
+
+        if sensor.period == 0:
+            raise ValueError("Cannot take the derivative of a sensor with 0 period.")
 
         super().__init__(period=sensor.period)
         self._sensor = sensor

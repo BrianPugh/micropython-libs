@@ -22,9 +22,6 @@ def test_peripheral_default_period():
 
 def test_peripheral_invalid_period():
     with pytest.raises(ValueError):
-        Peripheral(period=0)
-
-    with pytest.raises(ValueError):
         Peripheral(period=-0.1)
 
 
