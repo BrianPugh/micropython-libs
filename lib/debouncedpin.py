@@ -44,7 +44,7 @@ from machine import Pin, Timer
 
 
 class DebouncedPin(Pin):
-    def __init__(self, id, pull=-1, *, period=20, timer_id=-1):
+    def __init__(self, id, pull=-1, *, value=None, period=20, timer_id=-1):
         """Debounced input pin for reading buttons/switches.
 
         Unlike ``Pin``, doesn't take in ``mode`` since it must
@@ -62,7 +62,8 @@ class DebouncedPin(Pin):
             state to be considered updated value.
             Defaults to 15 milliseconds.
         """
-        super().__init__(id, Pin.IN, pull)
+        super().__init__(id, Pin.IN)
+        self.init(pull=pull, value=value)
 
         self._last_val = super().value()  # last input read
         self._val = self._last_val  # Current steady-state input
@@ -119,3 +120,59 @@ class DebouncedPin(Pin):
                     not val and self._user_trigger & Pin.IRQ_FALLING
                 ):
                     micropython.schedule(self._user_handler, self)
+
+    def pressed(self):
+        """Return button state.
+
+        If ``PULL_UP``, it assumes button pulls down.
+        If ``PULL_DOWN`` or not set, it assumes button pulls up.
+
+        Returns
+        -------
+        bool
+            ``True`` if button is pressed.
+        """
+        pull = self.pull()
+        if pull == self.PULL_UP:
+            return not self.value()
+        elif pull == self.PULL_DOWN or pull is None:
+            return self.value()
+        else:
+            raise NotImplementedError
+
+
+class DebouncedLedPin(DebouncedPin):
+    """Control a LED and read a switch with a single GPIO.
+
+    Connections (PULL_UP)::
+
+        GPIO -> 270Ω -> LED -> GND
+             -> 10kΩ -> switch -> GND
+
+    Connections (PULL_DOWN)::
+
+        GPIO -> 270Ω -> LED -> Vcc
+             -> 10kΩ -> switch -> Vcc
+
+    * Adjust the LED resistor according to desired forward current.
+    * The switch resistor should probably be in the range of 5k~20k.
+    """
+
+    def __init__(self, id, pull, *, value=None, period=20, timer_id=-1):
+        super().__init__(id, pull=pull, value=value, period=period, timer_id=timer_id)
+        self.init(Pin.OUT)
+
+    def value(self, x=None):
+        """Read debounced pin value.
+
+        Will inherently be delayed to actual value by ``period`` ms.
+        """
+        if x is None:
+            return self._val
+        else:
+            return Pin.value(self, x)
+
+    def _timer_callback(self, timer):
+        self.init(Pin.IN)
+        super()._timer_callback(timer)
+        self.init(Pin.OUT)
