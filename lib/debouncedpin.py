@@ -144,6 +144,9 @@ class DebouncedPin(Pin):
 class DebouncedLedPin(DebouncedPin):
     """Control a LED and read a switch with a single GPIO.
 
+    If the LED is activated; it will be turned off for an
+    imperceivably short duration to read the switch state.
+
     Connections (PULL_UP)::
 
         GPIO -> 270Ω -> LED -> GND
