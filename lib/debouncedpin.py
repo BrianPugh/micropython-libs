@@ -44,7 +44,7 @@ from machine import Pin, Timer
 
 
 class DebouncedPin(Pin):
-    def __init__(self, id, pull=-1, *, period=15, timer_id=-1):
+    def __init__(self, id, pull=-1, *, period=20, timer_id=-1):
         """Debounced input pin for reading buttons/switches.
 
         Unlike ``Pin``, doesn't take in ``mode`` since it must
@@ -63,28 +63,30 @@ class DebouncedPin(Pin):
             Defaults to 15 milliseconds.
         """
         super().__init__(id, Pin.IN, pull)
-        super().irq(handler=self._pin_trigger_handler)
 
-        self._val = self._prev_val = super().value()
+        self._last_val = super().value()  # last input read
+        self._val = self._last_val  # Current steady-state input
         self.period = period
 
         self._user_handler = None
         self._user_trigger = Pin.IRQ_RISING | Pin.IRQ_FALLING
 
         self.timer = Timer(timer_id)
-        self._timer_running = False
-        self._timer_callback_ref = self._timer_callback  # Alloc happens here
+        self.timer.init(period=self.period, callback=self._timer_callback)
 
-    def value(self):
+    def value(self, x=None):
         """Read debounced pin value.
 
         Will inherently be delayed to actual value by ``period`` ms.
         """
-        return self._val
+        if x is None:
+            return self._val
+        else:
+            raise ValueError
 
-    def __call__(self):
+    def __call__(self, x=None):
         """Equivalent to ``DebouncedPin.value()``."""
-        return self.value()
+        return self.value(x=x)
 
     def irq(self, handler=None, trigger=Pin.IRQ_FALLING | Pin.IRQ_RISING):
         """Invoke callback on rising and falling edge (debounced).
@@ -105,29 +107,12 @@ class DebouncedPin(Pin):
         self._user_handler = handler
         self._user_trigger = trigger
 
-    def _pin_trigger_handler(self, pin):
-        """When pin changes state, triggers a timer to execute ``_timer_callback`` in ``period`` milliseconds."""
-        if self._timer_running:
-            return
-
-        val = pin()
-        if val != self._prev_val:
-            self._prev_val = val
-            self._timer_running = True
-            self.timer.init(
-                period=self.period,
-                callback=self._timer_callback_ref,
-                mode=Timer.ONE_SHOT,
-            )
-
     def _timer_callback(self, timer):
         """Check if pin is in same state as when timer was triggered. If so, updates the stable pin state and schedules the user callback."""
-        self._timer_running = False
-
         val = super().value()
-        consistent_read = val == self._prev_val
-        self._prev_val = val
-        if consistent_read:
+        consistent_read = val == self._last_val
+        self._last_val = val
+        if consistent_read and val != self._val:
             self._val = val
             if self._user_handler:
                 if (val and self._user_trigger & Pin.IRQ_RISING) or (
