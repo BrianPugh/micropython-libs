@@ -1,5 +1,7 @@
 """Debounced input pin for reading buttons/switches.
 
+Can also drive an LED using the same pin.
+
 Typical use-case 1; ``handler`` will be invoked whenever
 a debounced press is detected. This assumes button connects
 to ground.
@@ -143,6 +145,8 @@ class DebouncedPin(Pin):
 
 class DebouncedLedPin(DebouncedPin):
     """Control a LED and read a switch with a single GPIO.
+
+    Requires an additional resistor component for the switch.
 
     If the LED is activated; it will be turned off for an
     imperceivably short duration to read the switch state.

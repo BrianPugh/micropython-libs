@@ -16,6 +16,7 @@ Contents
 * ``controlhal`` - Abstractions for controlling a dynamic system. Easy PID control loops.
 
 * ``debouncedpin`` - Debounced ``Pin`` drop-in that automatically handles switch debouncing.
+  Can also drive an LED using the same pin with ``DebouncedLedPin``.
 
 * ``interp1d`` - One dimensional interpolation functions.
 
