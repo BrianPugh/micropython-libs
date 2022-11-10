@@ -394,7 +394,10 @@ class PWMActuator(Actuator):
         pwm: machine.PWM
             Configured PWM object.
         """
-        super().__init__(period=period)
+        super().__init__(period=0)
+        if period is not None:
+            pwm.freq(round(1 / period))
+
         self.pwm = pwm
 
     def _raw_write(self, val):
