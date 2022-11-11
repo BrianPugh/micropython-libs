@@ -8,8 +8,10 @@ micropython-libs
 This repository contains a collection of single-file libraries intended for
 a micropython target.
 
-Contents
-========
+Generic Libraries
+=================
+These libraries generally don't depend on specific hardware and primarily contain just
+software algorithms/abstractions.
 
 * ``configstore`` - Persistent auto-write key-value store.
 
@@ -28,6 +30,13 @@ Contents
 * ``pidautotune`` - Autotune for PID controllers. Recommended interface: ``controlhal``.
 
 * ``ringbuffer`` - RingBuffer with builtin statistical methods.
+
+Hardware Drivers
+================
+These libraries contain drivers for specific hardware.
+Whenever possible, these drivers abide by the standards in `docs/hardware`_.
+
+* ``max6675`` - MAX6675 Cold-Junction-Compensated K-Thermocouple-to-Digital Converter (0°C to +1024°C).
 
 Installation
 ============
@@ -85,3 +94,4 @@ Repo Folder Structure
 .. |Python compat| image:: https://img.shields.io/badge/>=python-3.8-blue.svg
 .. |PyPi| image:: https://img.shields.io/pypi/v/libs.svg
         :target: https://pypi.python.org/pypi/libs
+.. _docs/hardware: docs/hardware_spec.rst
