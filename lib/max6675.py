@@ -81,7 +81,7 @@ class Max6675:
     CONVERSION_TIME_MS = 220  # Max Conversion Time
 
     def __init__(self, spi, cs, spi_preread_callback=None, baudrate=4_000_000):
-        """Create a Max6675 object.
+        """Create a Max6675 thermocouple object.
 
         Parameters
         ----------
@@ -120,8 +120,9 @@ class Max6675:
         -------
         float
             Temperature in celsius. Range [0, 1023.75] in 0.25 increments.
+            Returns ``None`` on first read if initial conversion is still being performed.
         """
-        if ticks_diff(time_ms(), self._prev_conversion_time) < self.CONVERSION_TIME_MS:
+        if ticks_diff(time_ms(), self._prev_conversion_time) <= self.CONVERSION_TIME_MS:
             return self._prev_val
         if self.spi_preread_callback:
             self.spi_preread_callback()
