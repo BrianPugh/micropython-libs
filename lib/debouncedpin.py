@@ -1,5 +1,7 @@
 """Debounced input pin for reading buttons/switches.
 
+Can also drive an LED using the same pin.
+
 Typical use-case 1; ``handler`` will be invoked whenever
 a debounced press is detected. This assumes button connects
 to ground.
@@ -44,7 +46,7 @@ from machine import Pin, Timer
 
 
 class DebouncedPin(Pin):
-    def __init__(self, id, pull=-1, *, period=15, timer_id=-1):
+    def __init__(self, id, pull=-1, *, value=None, period=20, timer_id=-1):
         """Debounced input pin for reading buttons/switches.
 
         Unlike ``Pin``, doesn't take in ``mode`` since it must
@@ -62,29 +64,32 @@ class DebouncedPin(Pin):
             state to be considered updated value.
             Defaults to 15 milliseconds.
         """
-        super().__init__(id, Pin.IN, pull)
-        super().irq(handler=self._pin_trigger_handler)
+        super().__init__(id, Pin.IN)
+        self.init(pull=pull, value=value)
 
-        self._val = self._prev_val = super().value()
+        self._last_val = super().value()  # last input read
+        self._val = self._last_val  # Current steady-state input
         self.period = period
 
         self._user_handler = None
         self._user_trigger = Pin.IRQ_RISING | Pin.IRQ_FALLING
 
         self.timer = Timer(timer_id)
-        self._timer_running = False
-        self._timer_callback_ref = self._timer_callback  # Alloc happens here
+        self.timer.init(period=self.period, callback=self._timer_callback)
 
-    def value(self):
+    def value(self, x=None):
         """Read debounced pin value.
 
         Will inherently be delayed to actual value by ``period`` ms.
         """
-        return self._val
+        if x is None:
+            return self._val
+        else:
+            raise ValueError
 
-    def __call__(self):
+    def __call__(self, x=None):
         """Equivalent to ``DebouncedPin.value()``."""
-        return self.value()
+        return self.value(x=x)
 
     def irq(self, handler=None, trigger=Pin.IRQ_FALLING | Pin.IRQ_RISING):
         """Invoke callback on rising and falling edge (debounced).
@@ -105,32 +110,83 @@ class DebouncedPin(Pin):
         self._user_handler = handler
         self._user_trigger = trigger
 
-    def _pin_trigger_handler(self, pin):
-        """When pin changes state, triggers a timer to execute ``_timer_callback`` in ``period`` milliseconds."""
-        if self._timer_running:
-            return
-
-        val = pin()
-        if val != self._prev_val:
-            self._prev_val = val
-            self._timer_running = True
-            self.timer.init(
-                period=self.period,
-                callback=self._timer_callback_ref,
-                mode=Timer.ONE_SHOT,
-            )
-
     def _timer_callback(self, timer):
         """Check if pin is in same state as when timer was triggered. If so, updates the stable pin state and schedules the user callback."""
-        self._timer_running = False
-
         val = super().value()
-        consistent_read = val == self._prev_val
-        self._prev_val = val
-        if consistent_read:
+        consistent_read = val == self._last_val
+        self._last_val = val
+        if consistent_read and val != self._val:
             self._val = val
             if self._user_handler:
                 if (val and self._user_trigger & Pin.IRQ_RISING) or (
                     not val and self._user_trigger & Pin.IRQ_FALLING
                 ):
                     micropython.schedule(self._user_handler, self)
+
+    def pressed(self):
+        """Return button state.
+
+        If ``PULL_UP``, it assumes button pulls down.
+        If ``PULL_DOWN`` or not set, it assumes button pulls up.
+
+        Returns
+        -------
+        bool
+            ``True`` if button is pressed.
+        """
+        pull = self.pull()
+        if pull == self.PULL_UP:
+            return not self.value()
+        elif pull == self.PULL_DOWN or pull is None:
+            return self.value()
+        else:
+            raise NotImplementedError
+
+
+class DebouncedLedPin(DebouncedPin):
+    """Control a LED and read a switch with a single GPIO.
+
+    Requires an additional resistor component for the switch.
+
+    If the LED is activated; it will be turned off for an
+    imperceivably short duration to read the switch state.
+
+    Connections (PULL_UP)::
+
+        GPIO -> 100Ω -> LED -> GND
+             -> 10kΩ -> switch -> GND
+
+    Connections (PULL_DOWN)::
+
+        GPIO -> 100Ω -> LED -> Vcc
+             -> 10kΩ -> switch -> Vcc
+
+    * Adjust the LED resistor according to desired forward current.
+    * The switch resistor should probably be in the range of 5k~20k.
+    * The switch resistor **can come after** the LED resistor.
+      This is useful if the led/switch combo is physically far from
+      the microcontroller. The LED resistor can be mounted to the PCB
+      and provides moderate short-circuit-protection.
+    """
+
+    def __init__(self, id, pull, *, value=None, period=20, timer_id=-1):
+        super().__init__(id, pull=pull, value=value, period=period, timer_id=timer_id)
+        # the Pin object is supposed to remember its pull state;
+        # but this isn't bug free in all ports.
+        self._pull = pull
+        self.init(Pin.OUT)
+
+    def value(self, x=None):
+        """Read debounced pin value.
+
+        Will inherently be delayed to actual value by ``period`` ms.
+        """
+        if x is None:
+            return self._val
+        else:
+            return Pin.value(self, x)
+
+    def _timer_callback(self, timer):
+        self.init(Pin.IN, pull=self._pull)
+        super()._timer_callback(timer)
+        self.init(Pin.OUT)

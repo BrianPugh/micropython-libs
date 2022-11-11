@@ -16,6 +16,7 @@ Contents
 * ``controlhal`` - Abstractions for controlling a dynamic system. Easy PID control loops.
 
 * ``debouncedpin`` - Debounced ``Pin`` drop-in that automatically handles switch debouncing.
+  Can also simultaneously drive an LED using the same pin with ``DebouncedLedPin``.
 
 * ``interp1d`` - One dimensional interpolation functions.
 
@@ -63,6 +64,15 @@ Finally, to actually get the code onto your device, run:
    belay install [DEVICE-PORT]
 
 You can specify other argument to ``belay install``, including cross-compiling the python code.
+
+Repo Folder Structure
+=====================
+
+* ``lib/`` - Micropython modules.
+
+*  ``tests/`` - Tests for micropython modules
+
+*  ``demos/`` - For code that primarily interacts with hardware, these serve as minimal scripts for demonstrating their use.
 
 
 .. _Belay Package Manager: https://belay.readthedocs.io/en/latest/Package%20Manager.html
