@@ -153,20 +153,27 @@ class DebouncedLedPin(DebouncedPin):
 
     Connections (PULL_UP)::
 
-        GPIO -> 270Ω -> LED -> GND
+        GPIO -> 100Ω -> LED -> GND
              -> 10kΩ -> switch -> GND
 
     Connections (PULL_DOWN)::
 
-        GPIO -> 270Ω -> LED -> Vcc
+        GPIO -> 100Ω -> LED -> Vcc
              -> 10kΩ -> switch -> Vcc
 
     * Adjust the LED resistor according to desired forward current.
     * The switch resistor should probably be in the range of 5k~20k.
+    * The switch resistor **can come after** the LED resistor.
+      This is useful if the led/switch combo is physically far from
+      the microcontroller. The LED resistor can be mounted to the PCB
+      and provides moderate short-circuit-protection.
     """
 
     def __init__(self, id, pull, *, value=None, period=20, timer_id=-1):
         super().__init__(id, pull=pull, value=value, period=period, timer_id=timer_id)
+        # the Pin object is supposed to remember its pull state;
+        # but this isn't bug free in all ports.
+        self._pull = pull
         self.init(Pin.OUT)
 
     def value(self, x=None):
@@ -180,6 +187,6 @@ class DebouncedLedPin(DebouncedPin):
             return Pin.value(self, x)
 
     def _timer_callback(self, timer):
-        self.init(Pin.IN)
+        self.init(Pin.IN, pull=self._pull)
         super()._timer_callback(timer)
         self.init(Pin.OUT)
