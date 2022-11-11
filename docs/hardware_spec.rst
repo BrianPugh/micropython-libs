@@ -23,9 +23,13 @@ Based on `CircuitPython's Design Guide`_, but favors human/scientific meaning ov
 | Property     | Type  | Unit                        |
 +==============+=======+=============================+
 | temperature  | float | degrees Celsius             |
++--------------+-------+-----------------------------+
 | pressure     | float | hectopascal (hPA)           |
++--------------+-------+-----------------------------+
 | weight       | float | grams (g)                   |
++--------------+-------+-----------------------------+
 | flowrate     | float | cc/min                      |
++--------------+-------+-----------------------------+
 | duty_cycle   | float | percentage in range [0, 1]  |
 +--------------+-------+-----------------------------+
 
