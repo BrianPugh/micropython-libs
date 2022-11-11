@@ -105,8 +105,6 @@ class Max6675:
 
         self._start_new_conversion()
 
-        raise NotImplementedError
-
     def __call__(self):
         """Read from sensor."""
         return self.read()
