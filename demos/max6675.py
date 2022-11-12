@@ -20,7 +20,7 @@ def temperature_loop():
     temperature_sensor = Max6675(spi, Pin(5, Pin.OUT))
     while True:
         try:
-            print(temperature_sensor())
+            print(temperature_sensor.read())
         except OpenThermocouple:
             print("OPEN")
         time.sleep(0.25)
