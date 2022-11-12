@@ -84,6 +84,8 @@ def check_type(obj, cls):
 
 
 class Peripheral:
+    default_period = 0.01
+
     def __init__(self, period=None):
         """Abstract IO class.
 
@@ -98,7 +100,7 @@ class Peripheral:
             Defaults to 0.01 seconds.
         """
         if period is None:
-            period = 0.01
+            period = self.default_period
         elif period < 0:
             raise ValueError
         self.period = period
