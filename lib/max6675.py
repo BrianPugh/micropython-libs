@@ -17,21 +17,8 @@ Typical use:
         sleep(0.22)
 """
 import re
-import time
 
-try:
-    import micropython  # pyright: ignore[reportMissingImports]
-except ModuleNotFoundError:
-    micropython = None
-
-if micropython:
-    time_ms = time.ticks_ms  # pyright: ignore[reportGeneralTypeIssues]
-    ticks_diff = time.ticks_diff  # pyright: ignore[reportGeneralTypeIssues]
-    const = micropython.const
-else:  # pragma: no cover
-    time_ms = lambda: int(round(time.monotonic_ns() / 1_000_000))  # noqa: E731
-    ticks_diff = lambda x, y: x - y  # noqa: E731
-    const = lambda x: x  # noqa: E731
+import controlhal
 
 _baudrate_pattern = re.compile(r"baudrate=(\d+)")
 
@@ -71,16 +58,18 @@ def _prev_baudrate(spi):
     return int(res.group(1))
 
 
-class Max6675:
+class Max6675(controlhal.Sensor):
     """The MAX6675 is a thermocouple-to-digital converter with a built-in 12-bit ADC.
 
     The MAX6675 contains cold-junction compensation sensing and correction,
     a digital controller, an SPI-compatible interface, and associated control logic.
     """
 
-    CONVERSION_TIME_MS = 220  # Max Conversion Time
+    default_period = 0.22
 
-    def __init__(self, spi, cs, spi_preread_callback=None, baudrate=4_000_000):
+    def __init__(
+        self, spi, cs, spi_preread_callback=None, baudrate=4_000_000, period=None
+    ):
         """Create a Max6675 thermocouple object.
 
         Parameters
@@ -95,6 +84,7 @@ class Max6675:
         baudrate: int
             The MAX6675 has a max frequency of 4.3MHz.
         """
+        super().__init__(period=period)
         self.spi = spi
         self.cs = cs
         self.spi_preread_callback = spi_preread_callback
@@ -103,17 +93,9 @@ class Max6675:
         self._buf = bytearray(2)
         self._prev_val = None
 
-        self._start_new_conversion()
-
-    def __call__(self):
-        """Read from sensor."""
-        return self.read()
-
-    def _start_new_conversion(self):
         self.cs.on()
-        self._prev_conversion_time = time_ms()
 
-    def read(self):
+    def _raw_read(self):
         """Read from sensor.
 
         Returns
@@ -122,8 +104,6 @@ class Max6675:
             Temperature in celsius. Range [0, 1023.75] in 0.25 increments.
             Returns ``None`` on first read if initial conversion is still being performed.
         """
-        if ticks_diff(time_ms(), self._prev_conversion_time) <= self.CONVERSION_TIME_MS:
-            return self._prev_val
         if self.spi_preread_callback:
             self.spi_preread_callback()
         prev_baudrate = _prev_baudrate(self.spi)
@@ -131,6 +111,6 @@ class Max6675:
         self.cs.off()  # Force CS low to output the first bit on the MAX6675 SO pin.
         self.spi.readinto(self._buf)
         self._prev_val = _interpret_buf(self._buf)
-        self._start_new_conversion()
+        self.cs.on()
         self.spi.init(baudrate=prev_baudrate)  # Restore baudrate
         return self._prev_val

@@ -84,6 +84,8 @@ def check_type(obj, cls):
 
 
 class Peripheral:
+    default_period = 0.01
+
     def __init__(self, period=None):
         """Abstract IO class.
 
@@ -98,7 +100,7 @@ class Peripheral:
             Defaults to 0.01 seconds.
         """
         if period is None:
-            period = 0.01
+            period = self.default_period
         elif period < 0:
             raise ValueError
         self.period = period
@@ -127,6 +129,32 @@ class Peripheral:
 class Sensor(Peripheral):
     def __init__(self, period=None, samples=1):
         """Abstract input sensor class.
+
+        Samples (oversammpling) can increase the
+        meaningful resolution at the cost of CPU
+        cycles/throughput:
+
+        +--------------+------------------+
+        | N Samples    | Additional Bits  |
+        +==============+==================+
+        |            1 |                0 |
+        +--------------+------------------+
+        |            4 |                1 |
+        +--------------+------------------+
+        |           16 |                2 |
+        +--------------+------------------+
+        |           64 |                3 |
+        +--------------+------------------+
+        |          256 |                4 |
+        +--------------+------------------+
+        |         1024 |                5 |
+        +--------------+------------------+
+        |         4096 |                6 |
+        +--------------+------------------+
+        |        16384 |                7 |
+        +--------------+------------------+
+        |        65536 |                8 |
+        +--------------+------------------+
 
         Parameters
         ----------

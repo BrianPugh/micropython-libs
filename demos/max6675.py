@@ -3,14 +3,13 @@ from pathlib import Path
 
 import belay
 
-lib = Path(__file__).parent.parent / "lib" / "max6675.py"
-
 parser = argparse.ArgumentParser()
 parser.add_argument("port")
 args = parser.parse_args()
 
 device = belay.Device(args.port)
-device.sync(lib)
+device.sync(Path(__file__).parent.parent / "lib" / "max6675.py")
+device.sync(Path(__file__).parent.parent / "lib" / "controlhal.py")
 
 
 @device.task
@@ -21,7 +20,7 @@ def temperature_loop():
     temperature_sensor = Max6675(spi, Pin(5, Pin.OUT))
     while True:
         try:
-            print(temperature_sensor())
+            print(temperature_sensor.read())
         except OpenThermocouple:
             print("OPEN")
         time.sleep(0.25)

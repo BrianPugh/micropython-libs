@@ -83,6 +83,8 @@ Repo Folder Structure
 
 *  ``demos/`` - For code that primarily interacts with hardware, these serve as minimal scripts for demonstrating their use.
 
+*  ``tools/`` - Auxiliary scripts that aid in project maintenance or experiments to drive design decisions.
+
 
 .. _Belay Package Manager: https://belay.readthedocs.io/en/latest/Package%20Manager.html
 .. |GHA tests| image:: https://github.com/BrianPugh/micropython-libs/workflows/tests/badge.svg

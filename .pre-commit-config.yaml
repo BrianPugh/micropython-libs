@@ -115,4 +115,4 @@ repos:
     rev: v1.1.277
     hooks:
       - id: pyright
-        exclude: ^(tests/|demos/|lib/debouncedpin\.py)
+        exclude: ^(tests/|demos/|lib/debouncedpin\.py|tools/)

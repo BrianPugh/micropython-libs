@@ -78,6 +78,7 @@ exclude_dirs = [
     "tests",
     "demos",
     "sim",
+    "tools",
 ]
 
 [tool.pyright]
