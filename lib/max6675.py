@@ -19,6 +19,8 @@ Typical use:
 import re
 import time
 
+import controlhal
+
 try:
     import micropython  # pyright: ignore[reportMissingImports]
 except ModuleNotFoundError:
@@ -71,16 +73,18 @@ def _prev_baudrate(spi):
     return int(res.group(1))
 
 
-class Max6675:
+class Max6675(controlhal.Sensor):
     """The MAX6675 is a thermocouple-to-digital converter with a built-in 12-bit ADC.
 
     The MAX6675 contains cold-junction compensation sensing and correction,
     a digital controller, an SPI-compatible interface, and associated control logic.
     """
 
-    CONVERSION_TIME_MS = 220  # Max Conversion Time
+    default_period = 0.22
 
-    def __init__(self, spi, cs, spi_preread_callback=None, baudrate=4_000_000):
+    def __init__(
+        self, spi, cs, spi_preread_callback=None, baudrate=4_000_000, period=None
+    ):
         """Create a Max6675 thermocouple object.
 
         Parameters
@@ -95,6 +99,7 @@ class Max6675:
         baudrate: int
             The MAX6675 has a max frequency of 4.3MHz.
         """
+        super().__init__(period=period)
         self.spi = spi
         self.cs = cs
         self.spi_preread_callback = spi_preread_callback
@@ -122,7 +127,7 @@ class Max6675:
             Temperature in celsius. Range [0, 1023.75] in 0.25 increments.
             Returns ``None`` on first read if initial conversion is still being performed.
         """
-        if ticks_diff(time_ms(), self._prev_conversion_time) <= self.CONVERSION_TIME_MS:
+        if ticks_diff(time_ms(), self._prev_conversion_time) <= self.period:
             return self._prev_val
         if self.spi_preread_callback:
             self.spi_preread_callback()
