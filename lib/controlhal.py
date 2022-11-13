@@ -193,6 +193,11 @@ class Sensor(Peripheral):
 
         To be implemented by subclass.
         Only to be called in ``Sensor.read`` and not for external use.
+        The returned value **may** be in standard units; or may be in a fast
+        intermediate format for ``self._convert`` to post process into standard
+        units. It is recommended to put fast, sensor reading logic into
+        ``_raw_read``, and put expensive deferred logic into ``_convert``.
+        This way, the sensor can be oversampled with minimal overhead.
 
         Returns
         -------
