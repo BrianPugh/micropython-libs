@@ -125,6 +125,18 @@ class Peripheral:
             return True
         return False
 
+    def __call__(self, val=None):
+        if val is None:
+            return self.read()
+        else:
+            return self.write(val)
+
+    def read(self):
+        raise NotImplementedError
+
+    def write(self, val):
+        raise NotImplementedError
+
 
 class Sensor(Peripheral):
     def __init__(self, period=None, samples=1):
