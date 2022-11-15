@@ -37,6 +37,7 @@ pytest-cov = "^4.0.0"
 pytest-mock = "^3.7.0"
 matplotlib = "^3.6.1"
 numpy = "^1.23.4"
+pytest-skip-slow = "^0.0.3"
 
 [tool.coverage.run]
 branch = true

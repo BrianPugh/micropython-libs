@@ -69,7 +69,18 @@ class AutotuneComplete(Exception):
 
 
 class AutotuneSuccess(AutotuneComplete):
-    """ """
+    """Autotuning complete.
+
+    Fetch controller parameters like::
+
+        try:
+            control_loop()
+        except AutotuneSuccess as e:
+            control_loop.controller.parameters = e.parameters
+    """
+
+    def __init__(self, parameters):
+        self.parameters = parameters
 
 
 class AutotuneFailure(AutotuneComplete):

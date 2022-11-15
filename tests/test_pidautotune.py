@@ -49,6 +49,7 @@ def _simulate(mock_time, controller):
     return ts, power_percents, water_temperatures, targets
 
 
+@pytest.mark.slow
 def test_pid_autotune(mock_time_autotune, mock_time_pid):
     controller = PIDAutotune(setpoint=90, hysterisis=0.1)
     ts, power_percents, water_temperatures, targets = _simulate(

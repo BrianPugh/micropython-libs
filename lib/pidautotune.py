@@ -11,6 +11,7 @@ import time
 from collections import namedtuple
 from math import pi
 
+from controlhal import AutotuneFailure, AutotuneSuccess, Controller
 from ringbuffer import RingBuffer
 
 try:
@@ -31,18 +32,6 @@ else:  # pragma: no cover
 TuningRuleCoeffs = namedtuple("TuningRuleCoeffs", ("k_p", "t_i", "t_d"))
 
 
-class AutotuneComplete(Exception):
-    """Autotune finished running."""
-
-
-class AutotuneSuccess(AutotuneComplete):
-    """ """
-
-
-class AutotuneFailure(AutotuneComplete):
-    """ """
-
-
 def _clamp(value, limits):
     lower, upper = limits
     if (upper is not None) and (value > upper):
@@ -52,7 +41,7 @@ def _clamp(value, limits):
     return value
 
 
-class PIDAutotune(object):
+class PIDAutotune(Controller):
     PEAK_AMPLITUDE_TOLERANCE = 0.05  # [0, 1] percent
 
     STATE_OFF = const(0)
@@ -62,7 +51,9 @@ class PIDAutotune(object):
     STATE_FAILED = const(4)
 
     _tuning_coeffs = {
-        "ziegler-nichols": TuningRuleCoeffs(0.6, 0.5, 1 / 8),
+        "ziegler-nichols-p": TuningRuleCoeffs(0.5, 0.0, 0.0),
+        "ziegler-nichols-pi": TuningRuleCoeffs(0.45, 5 / 6, 0.0),
+        "ziegler-nichols-pid": TuningRuleCoeffs(0.6, 0.5, 1 / 8),
         "some-overshoot": TuningRuleCoeffs(1 / 3, 0.5, 1 / 3),
         "no-overshoot": TuningRuleCoeffs(0.2, 0.5, 1 / 3),
         "tyreus-luyben": TuningRuleCoeffs(1 / 3.2, 2.2, 1 / 6.3),
@@ -78,6 +69,7 @@ class PIDAutotune(object):
         lookback=16,
         output_limits=(0, 1),
         max_cycles=10,
+        method="some-overshoot",
     ):
         """Estimate viable parameters for a PID controller.
 
@@ -113,14 +105,15 @@ class PIDAutotune(object):
         max_cycles: int
             Maximum number of times to control cycle before aborting autotune process due to
             measurement instability.
+        method:
+            Default tuning method coefficients used when ``AutotuneSuccess`` is raised.
         """
-        if setpoint is None:
-            raise ValueError("setpoint must be specified")
+        if method not in self._tuning_coeffs:
+            raise ValueError
 
+        self.method = method
         self.hysterisis = hysterisis
         self._inputs = RingBuffer(lookback)
-        self.period = period
-        self.setpoint = setpoint
         self.output_step = output_step
         self.output_limits = output_limits
         self.max_cycles = max_cycles
@@ -132,7 +125,6 @@ class PIDAutotune(object):
         )  # timestamp in mS at detected peaks
 
         self._output = 0
-        self._last_run_timestamp = 0
         self._proposed_peak_type = 0
         self._peak_count = 0
         self._initial_output = 0
@@ -142,6 +134,11 @@ class PIDAutotune(object):
         self._output_range = _clamp(
             self._initial_output + self.output_step, output_limits
         ) - _clamp(self._initial_output - self.output_step, output_limits)
+
+        super().__init__(setpoint=setpoint, period=period)
+
+    def reset(self):
+        self._state = PIDAutotune.STATE_OFF
 
     @property
     def output(self):
@@ -153,7 +150,11 @@ class PIDAutotune(object):
         """Get a list of all available tuning rules."""
         return self._tuning_coeffs.keys()
 
-    def compute_tunings(self, tuning_rule="ziegler-nichols"):
+    @property
+    def parameters(self):
+        return self.compute_tunings()
+
+    def compute_tunings(self, tuning_rule=None):
         """Get PID parameters.
 
         Parameters
@@ -161,10 +162,12 @@ class PIDAutotune(object):
         tuning_rule: str
             Rule to calculate the PID parameters.
         """
+        if tuning_rule is None:
+            tuning_rule = self.method
         coeffs = self._tuning_coeffs[tuning_rule]
         k_p = coeffs.k_p * self._ultimate_gain
-        k_i = k_p / (coeffs.t_i * self._ultimate_period)
-        k_d = k_p * (coeffs.t_d * self._ultimate_period)
+        k_i = k_p / (coeffs.t_i * self._ultimate_period) if coeffs.t_i else 0
+        k_d = k_p * (coeffs.t_d * self._ultimate_period) if coeffs.t_d else 0
         return k_p, k_i, k_d
 
     def __call__(self, input_val):
@@ -183,7 +186,7 @@ class PIDAutotune(object):
             Autotuning is complete and was successful.
             Use ``autotuner.get_pid_parameters()`` to get results.
         AutotuneFailure
-            Autotuning is complete and was successful.
+            Autotuning is complete and was not successful.
 
         Returns
         -------
@@ -197,10 +200,10 @@ class PIDAutotune(object):
             or self._state == PIDAutotune.STATE_FAILED
         ):
             self._init_tuner(input_val, now)
-        elif ticks_diff(now, self._last_run_timestamp) < 1000 * self.period:
+        elif ticks_diff(now, self._last_action_time) < 1000 * self.period:
             return self.output
 
-        self._last_run_timestamp = now
+        self._last_action_time = now
 
         # check input and change relay state if necessary
         if (
@@ -292,7 +295,7 @@ class PIDAutotune(object):
             # Average period, convert milliseconds -> seconds
             ultimate_period /= 1000 * n_periods
             self._ultimate_period = ultimate_period
-            raise AutotuneSuccess
+            raise AutotuneSuccess(self.compute_tunings(self.method))
         elif self._peak_count >= 2 * self.max_cycles:
             # if the autotune has not already converged, terminate
             self._output = 0
