@@ -106,7 +106,7 @@ def main(mock_time):
     # The function to be called anytime a slider's value changes
     def update(val):
         controller.reset()
-        controller.tunings = (slider_p.val, slider_i.val, slider_d.val)
+        controller.parameters = (slider_p.val, slider_i.val, slider_d.val)
         ts, power_percents, water_temperatures, targets = _simulate(
             mock_time, controller
         )

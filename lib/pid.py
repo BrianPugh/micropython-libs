@@ -6,6 +6,8 @@ Adapted from:
 
 import time
 
+from controlhal import Controller
+
 try:
     import micropython  # pyright: ignore[reportMissingImports]
 except ImportError:
@@ -28,7 +30,7 @@ def _clamp(value, limits):
     return value
 
 
-class PID(object):
+class PID(Controller):
     """A simple PID controller."""
 
     def __init__(
@@ -79,8 +81,6 @@ class PID(object):
             the input directly rather than on the error (which is the traditional way).
         """
         self.k_p, self.k_i, self.k_d = k_p, k_i, k_d
-        self.setpoint = setpoint
-        self.period = period
 
         self._min_output, self._max_output = None, None
         self._auto_mode = auto_mode
@@ -91,13 +91,14 @@ class PID(object):
         self._integral = 0
         self._derivative = 0
 
-        self._last_time = time_ms()
+        self._last_action_time = time_ms()
         self._last_output = None
         self._last_error = None
         self._last_input = None
 
         self.output_limits = output_limits
-        self.reset()
+
+        super().__init__(setpoint=setpoint, period=period)
 
     def __call__(self, input_):
         """
@@ -122,7 +123,7 @@ class PID(object):
             return self._last_output
 
         now = time_ms()
-        dt = ticks_diff(now, self._last_time)
+        dt = ticks_diff(now, self._last_action_time)
         dt /= 1000  # dt is now in seconds
 
         if (
@@ -172,7 +173,7 @@ class PID(object):
         self._last_output = output
         self._last_input = input_
         self._last_error = error
-        self._last_time = now
+        self._last_action_time = now
 
         return output
 
@@ -197,12 +198,12 @@ class PID(object):
         return self._proportional, self._integral, self._derivative
 
     @property
-    def tunings(self):
+    def parameters(self):
         """Tunings used by the controller as a tuple: (Kp, Ki, Kd)."""
         return self.k_p, self.k_i, self.k_d
 
-    @tunings.setter
-    def tunings(self, tunings):
+    @parameters.setter
+    def parameters(self, tunings):
         """Set the PID tunings."""
         self.k_p, self.k_i, self.k_d = tunings
 
@@ -277,6 +278,6 @@ class PID(object):
         self._integral = 0
         self._derivative = 0
         self._integral = _clamp(self._integral, self.output_limits)
-        self._last_time = time_ms()
+        self._last_action_time = time_ms()
         self._last_output = None
         self._last_input = None

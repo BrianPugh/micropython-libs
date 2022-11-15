@@ -69,7 +69,7 @@ def test_pid_basic(mock_time, assert_array_equal):
     assert_array_equal(np.array([ts, water_temperatures, power_percents]).transpose())
 
     controller.components
-    controller.tunings = 1.0, 0.1, 0.0
+    controller.parameters = 1.0, 0.1, 0.0
 
 
 def test_pid_set_limits():
