@@ -2,6 +2,8 @@ import pytest
 from common import MockTime
 from controlhal import (
     Actuator,
+    ADCSensor,
+    AutotuneSuccess,
     ControlLoop,
     Derivative,
     Peripheral,
@@ -13,6 +15,13 @@ from controlhal import (
 @pytest.fixture
 def mock_time(mocker):
     return MockTime.patch(mocker, "controlhal.time_ms")
+
+
+def test_autotune_success():
+    try:
+        raise AutotuneSuccess(parameters=(1, 2))
+    except AutotuneSuccess as e:
+        assert e.parameters == (1, 2)
 
 
 def test_peripheral_default_period():
@@ -121,6 +130,13 @@ def test_derivative(mock_time):
     mock_time.time += 100
 
     assert val == 10
+
+
+def test_adc_sensor(mocker):
+    adc = mocker.MagicMock()
+    adc.read_u16.return_value = 12345
+    sensor = ADCSensor(adc)
+    assert sensor.read() == 12345 / 65535
 
 
 @pytest.fixture
