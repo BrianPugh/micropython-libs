@@ -25,9 +25,9 @@ software algorithms/abstractions.
 * ``oversample`` - Oversample a sensor to improve the SNR and measurement resolution
   at the cost of increased CPU utilization and reduced throughput.
 
-* ``pid`` - PID controller. Not recommended for fast processes (not for quadcopters). Recommended interface: ``controlhal``.
+* ``pid`` - PID controller. Not recommended for fast processes (not for quadcopters). Requires: ``controlhal``.
 
-* ``pidautotune`` - Autotune for PID controllers. Recommended interface: ``controlhal``.
+* ``pidautotune`` - Autotune for PID controllers. Requires ``controlhal``.
 
 * ``ringbuffer`` - RingBuffer with builtin statistical methods.
 

@@ -51,16 +51,6 @@ try:
 except ModuleNotFoundError:
     micropython = None
 
-try:
-    from pid import PID
-except ModuleNotFoundError:
-    PID = None
-
-try:
-    from pidautotune import PIDAutotune
-except ModuleNotFoundError:
-    PIDAutotune = None
-
 if micropython:
     from machine import Timer  # pyright: ignore[reportMissingImports]
 
@@ -73,20 +63,23 @@ else:  # pragma: no cover
     ticks_diff = lambda x, y: x - y  # noqa: E731
     const = lambda x: x  # noqa: E731
 
-# For mitigating floating-point nonsense
-_eps = const(1e-5)
+
+class AutotuneComplete(Exception):
+    """Autotune finished running."""
 
 
-def check_type(obj, cls):
-    if not isinstance(obj, cls):
-        raise ValueError(f"Expected {cls.__name__}")
-    return obj
+class AutotuneSuccess(AutotuneComplete):
+    """ """
+
+
+class AutotuneFailure(AutotuneComplete):
+    """ """
 
 
 class Peripheral:
     default_period = 0.01
 
-    def __init__(self, period=None):
+    def __init__(self, *, period=None):
         """Abstract IO class.
 
         Abstraction layer for any sensor (input) or actuator (output).
@@ -139,7 +132,7 @@ class Peripheral:
 
 
 class Sensor(Peripheral):
-    def __init__(self, period=None, samples=1):
+    def __init__(self, *, period=None, samples=1):
         """Abstract input sensor class.
 
         Samples (oversammpling) can increase the
@@ -302,7 +295,7 @@ class ADCSensor(Sensor):
 
 
 class Actuator(Peripheral):
-    def __init__(self, period=None):
+    def __init__(self, *, period=None):
         """Abstract output actuator class.
 
         Parameters
@@ -449,119 +442,149 @@ class PWMActuator(Actuator):
         self.pwm.duty_u16(round(val * 65535))
 
 
-class ControlLoop(Peripheral):
-    MODE_NORMAL = const(0)
-    MODE_AUTOTUNE = const(1)
+class Controller(Peripheral):
+    """System that consumes sensor data and produces actuator predictions.
 
-    def __init__(self, actuator, sensor, pid=(1.0, 0.0, 0.0)):
-        """Create a control loop.
+    Subclass MUST implement:
+        * property ``parameters``.
+        * method ``reset``.
+        * method ``__call__``.
+    """
+
+    def __init__(self, *, setpoint, period=None):
+        """Create a controller object.
+
+        Parameters
+        ----------
+        setpoint: float
+            Target sensor value.
+        emergency_power: float
+            Upon uncaught exception, set actuator power to this value.
+        """
+        super().__init__(period=period)
+        self.setpoint = setpoint
+        self.reset()
+
+    def reset(self):
+        raise NotImplementedError
+
+    @property
+    def setpoint(self):
+        return self._setpoint
+
+    @setpoint.setter
+    def setpoint(self, val):
+        self._setpoint = val
+
+    @property
+    def parameters(self):
+        """Get controller parameters.
+
+        Returns
+        -------
+        tuple
+            Elements that configure controller.
+            e.g. for a PID controller, this would be ``(p, i, d)``
+            Must be in same order as in ``__init__``.
+        """
+        raise NotImplementedError
+
+    @parameters.setter
+    def parameters(self, val):
+        """Update controller parameters."""
+        raise NotImplementedError
+
+    def __call__(self, val):
+        """Predict actuator value for current sensor value.
+
+        May take in additional values.
+
+        Parameters
+        ----------
+        val: float
+            Sensor value to predict actuator value.
+
+        Raises
+        ------
+        AutotuneSuccess
+            If Autotuning, it is complete and was successful.
+            Use ``autotuner.get_pid_parameters()`` to get results.
+        AutotuneFailure
+            If Autotuning, it is complete and was not successful.
+
+        Returns
+        -------
+        float
+            Power level in range [0, 1] to set acctuator to.
+        """
+        raise NotImplementedError
+
+
+class ControlLoop(Peripheral):
+    def __init__(self, actuator, sensor, controller, *, period=None):
+        """Create a self-contained control loop system.
 
         Parameters
         ----------
         actuator: Actuator
-        sensor: Optional[Sensor]
-        pid: Union[tuple, PID]
-            If a tuple, a PID object will be created from these tunings.
-            If a PID object, will directly be used.
+        sensor: Sensor
+        controller: Controller
         """
-        if PID is None:
-            raise ModuleNotFoundError("No module named 'pid'")  # pragma: no cover
-        self.actuator = check_type(actuator, Actuator)
-        self.sensor = check_type(sensor, Sensor)
-
-        if isinstance(pid, tuple):
-            self.pid = PID(
-                *pid,
-                output_limits=(0, 1),
-                period=max(actuator.period, sensor.period),
-            )
-        else:
-            self.pid = pid
-        self.autotuner = None
-
-        self.set_mode_normal()
-
-    def set_mode_autotune(self, setpoint, **kwargs):
-        """Change operating mode to autotune.
-
-        See ``PIDAutotune`` for docs.
-        """
-        if PIDAutotune is None:
-            raise ModuleNotFoundError(
-                "No module named 'pidautotune'"
-            )  # pragma: no cover
-
-        if self.mode == self.MODE_AUTOTUNE:
-            return
-
-        self.mode = self.MODE_AUTOTUNE
-        self.autotuner = PIDAutotune(setpoint, period=self.pid.period, **kwargs)
-        self.pid.set_auto_mode(False)
-
-    def set_mode_normal(self):
-        self.pid.set_auto_mode(True)
-        self.mode = self.MODE_NORMAL
+        super().__init__(period=period)
+        self.actuator = actuator
+        self.sensor = sensor
+        self._controller_stack = [controller]
 
     @property
-    def tunings(self):
-        return self.pid.tunings
-
-    def compute_tunings(self, *args, **kwargs):
-        if self.mode == self.MODE_NORMAL:
-            return self.pid.tunings
-        elif self.mode == self.MODE_AUTOTUNE:
-            if self.autotuner is None:
-                raise Exception
-            return self.autotuner.compute_tunings(*args, **kwargs)
-        else:
-            raise NotImplementedError
-
-    def __eq__(self, other):
-        if not isinstance(other, type(self)):
-            return False
-        return (
-            self.actuator is other.actuator
-            and self.sensor is other.sensor
-            and (self.tunings == other.tunings)
-        )
-
-    def read(self):
-        """Read sensor.
-
-        Note: not symmetrical to ``write``; returns last sensor value, not setpoint.
-        """
-        return self.sensor.read()
-
-    def write(self, val):
-        """Set target setpoint.
-
-        Here to have the same interface as an actuator.
-
-        Note: not symmetrical to ``read``; doesn't directly write to actuator.
-        """
-        self.setpoint = val
+    def controller(self):
+        return self._controller_stack[-1]
 
     @property
     def setpoint(self):
-        """Get target setpoint."""
-        return self.pid.setpoint
+        return self.controller.setpoint
 
     @setpoint.setter
     def setpoint(self, val):
-        """Set target setpoint."""
-        self.pid.setpoint = val
+        self.controller.setpoint = val
 
-    def __call__(self):
-        """Update feedback loop."""
-        if self.mode == self.MODE_NORMAL:
-            controller = self.pid
-        elif self.mode == self.MODE_AUTOTUNE:
-            if self.autotuner is None:
-                raise Exception
-            controller = self.autotuner
-        else:
-            raise NotImplementedError
+    def read(self):
+        return self.sensor.read()
 
+    def write(self, val):
+        self.setpoint = val
+
+    def use(self, controller):
+        """Temporarily replace controller.
+
+        Parameters
+        ----------
+        controller: Controller
+            Temporarily replace ``self.controller``.
+            For example, to use an autotuner.
+        """
+        self._controller_stack.append(controller)
+        return self  # in case used as contextmanager
+
+    def revert(self):
+        """Undoes the controller set by previous ``use``.
+
+        Controller's reset will be triggered.
+        """
+        self._controller_stack.pop()
+        self.controller.reset()
+
+    def __enter__(self):
+        """Context manager for temporarily swapping out controller."""
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.revert()
+
+    def __call__(self, *args, **kwargs):
+        """Update feedback loop.
+
+        Passes along arguments to Controller.__call__
+        """
         val = self.read()
-        power_target = controller(val)
+        power_target = self.controller(val, *args, **kwargs)
         self.actuator.write(power_target)
