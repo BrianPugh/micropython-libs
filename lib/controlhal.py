@@ -544,11 +544,11 @@ class ControlLoop(Peripheral):
         super().__init__(period=period)
         self.actuator = actuator
         self.sensor = sensor
-        self._controller_stack = [controller]
+        self._controllers = [controller]
 
     @property
     def controller(self):
-        return self._controller_stack[-1]
+        return self._controllers[-1]
 
     @property
     def setpoint(self):
@@ -573,7 +573,7 @@ class ControlLoop(Peripheral):
             Temporarily replace ``self.controller``.
             For example, to use an autotuner.
         """
-        self._controller_stack.append(controller)
+        self._controllers.append(controller)
         return self  # in case used as contextmanager
 
     def revert(self):
@@ -581,7 +581,7 @@ class ControlLoop(Peripheral):
 
         Controller's reset will be triggered.
         """
-        self._controller_stack.pop()
+        self._controllers.pop()
         self.controller.reset()
 
     def __enter__(self):
@@ -591,11 +591,20 @@ class ControlLoop(Peripheral):
     def __exit__(self, exc_type, exc_value, traceback):
         self.revert()
 
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        return (
+            self.actuator == other.actuator
+            and self.sensor == other.sensor
+            and self.controller == other.controller
+        )
+
     def __call__(self, *args, **kwargs):
         """Update feedback loop.
 
         Passes along arguments to Controller.__call__
         """
-        val = self.read()
+        val = self.sensor()
         power_target = self.controller(val, *args, **kwargs)
-        self.actuator.write(power_target)
+        self.actuator(power_target)

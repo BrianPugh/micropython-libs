@@ -123,16 +123,10 @@ def test_derivative(mock_time):
     assert val == 10
 
 
-def test_control_loop_invalid_dtype(mocker):
-    with pytest.raises(ValueError):
-        ControlLoop(1, 2)
-
-
 @pytest.fixture
 def sensor(mocker):
     class TestSensor(Sensor):
-        def _raw_read(self):
-            return 7
+        _raw_read = mocker.MagicMock(return_value=7)
 
     return TestSensor()
 
@@ -146,8 +140,8 @@ def actuator(mocker):
 
 
 @pytest.fixture
-def mock_pid(mocker):
-    return mocker.patch("controlhal.PID")
+def controller(mocker):
+    return mocker.MagicMock(return_value=0.123)
 
 
 @pytest.fixture
@@ -155,67 +149,25 @@ def mock_pidautotune(mocker):
     return mocker.patch("controlhal.PIDAutotune")
 
 
-def test_control_loop_from_tuple(mock_pid, sensor, actuator):
-    control_loop = ControlLoop(actuator, sensor)
-
-    mock_pid.assert_called_once_with(1.0, 0.0, 0.0, output_limits=(0, 1), period=0.01)
-    control_loop.pid.set_auto_mode.assert_called_once_with(True)
-    assert control_loop.tunings == control_loop.pid.tunings
-    assert control_loop.compute_tunings() == control_loop.tunings
-
-    control_loop.pid.side_effect = lambda x: 0.7
-
-    assert control_loop.read() == 7
-    control_loop.write(17)
-    assert control_loop.setpoint == 17
-
+def test_control_loop_basic(mocker, sensor, actuator, controller):
+    controller2 = mocker.MagicMock(return_value=0.456)
+    control_loop = ControlLoop(actuator, sensor, controller)
     control_loop()
-    actuator._raw_write.assert_called_once_with(0.7)
+    actuator._raw_write.assert_called_once()
+    sensor._raw_read.assert_called_once()
+    controller.assert_called_once()
 
-
-def test_control_loop_from_pid(mocker, mock_pid, sensor, actuator):
-    pid = mocker.MagicMock()
-    ControlLoop(actuator, sensor, pid=pid)
-    pid.set_auto_mode.assert_called_once()
-    mock_pid.assert_not_called()
-
-
-def test_control_loop_autotune(mock_pid, mock_pidautotune, sensor, actuator):
-    control_loop = ControlLoop(actuator, sensor)
-    control_loop.pid.set_auto_mode.assert_called_once_with(True)
-
-    control_loop.set_mode_autotune(100)
-    mock_pidautotune.assert_called_once()
-    control_loop.pid.set_auto_mode.assert_called_with(False)
-
-    # Since we are already in autotune mode;
-    # subsequent calls shouldn't do anything.
-    control_loop.set_mode_autotune(100)
-    mock_pidautotune.assert_called_once()
-
-    control_loop.autotuner.side_effect = lambda x: 0.7
-
-    control_loop()
-    actuator._raw_write.assert_called_once_with(0.7)
-
-    control_loop.compute_tunings()
-    control_loop.autotuner.compute_tunings.assert_called_once()
-
-
-def test_control_loop_autotune_impossible_state(
-    mock_pid, mock_pidautotune, sensor, actuator
-):
-    control_loop = ControlLoop(actuator, sensor)
-    control_loop.mode = ControlLoop.MODE_AUTOTUNE
-    with pytest.raises(Exception):
+    with control_loop.use(controller2):
+        assert control_loop._controllers == [controller, controller2]
         control_loop()
-    with pytest.raises(Exception):
-        control_loop.compute_tunings()
+        controller2.assert_called_once()
+
+    assert control_loop._controllers == [controller]
 
 
-def test_control_loop_eq(actuator, sensor):
-    control_loop1 = ControlLoop(actuator, sensor)
-    control_loop2 = ControlLoop(actuator, sensor)
+def test_control_loop_eq(actuator, sensor, controller):
+    control_loop1 = ControlLoop(actuator, sensor, controller)
+    control_loop2 = ControlLoop(actuator, sensor, controller)
 
     assert control_loop1 == control_loop2
     assert control_loop1 != 4
