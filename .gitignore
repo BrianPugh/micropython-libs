@@ -234,3 +234,4 @@ Temporary Items
 
 /poetry.lock
 tests/**/*_actual.*
+*.lprof
