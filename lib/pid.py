@@ -44,6 +44,7 @@ class PID(Controller):
         auto_mode=True,
         proportional_on_measurement=False,
         differetial_on_measurement=True,
+        conditional_integration=True,
     ):
         """
         Initialize a new PID controller.
@@ -79,6 +80,9 @@ class PID(Controller):
         differetial_on_measurement: bool
             Whether the differential term should be calculated on
             the input directly rather than on the error (which is the traditional way).
+        conditional_integration: bool
+            Only integrate when actuator is not saturating.
+            Helps mitigate integral windup.
         """
         self.k_p, self.k_i, self.k_d = k_p, k_i, k_d
 
@@ -86,6 +90,7 @@ class PID(Controller):
         self._auto_mode = auto_mode
         self.proportional_on_measurement = proportional_on_measurement
         self.differetial_on_measurement = differetial_on_measurement
+        self.conditional_integration = conditional_integration
 
         self._proportional = 0
         self._integral = 0
@@ -168,6 +173,10 @@ class PID(Controller):
             output += self._integral + self._derivative
 
         output = _clamp(output, self.output_limits)
+
+        if self.conditional_integration and output in self.output_limits:
+            # Prevent integral from accumulating while actuator is operating in saturation.
+            self._integral = 0
 
         # Keep track of state
         self._last_output = output
