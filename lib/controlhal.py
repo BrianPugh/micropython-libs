@@ -396,7 +396,7 @@ class TimeProportionalActuator(Actuator):
         self._timer = Timer(timer_id)  # pyright: ignore[reportOptionalCall]
         # period is in seconds; timer.init expects mS.
         # This timer will execute 100 times per period.
-        self._timer.init(period=10 * period, callback=self._timer_callback)
+        self._timer.init(period=int(10 * period), callback=self._timer_callback)
 
     @property
     def setpoint(self):
