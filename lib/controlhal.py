@@ -48,7 +48,7 @@ import time
 
 try:
     import micropython  # pyright: ignore[reportMissingImports]
-except ModuleNotFoundError:
+except ImportError:
     micropython = None
 
 if micropython:
@@ -84,7 +84,7 @@ class AutotuneSuccess(AutotuneComplete):
 
 
 class AutotuneFailure(AutotuneComplete):
-    """ """
+    """Autotune failed to converge to good values."""
 
 
 class Peripheral:
