@@ -62,7 +62,7 @@ class DebouncedPin(Pin):
         period: int
             Debounce time in milliseconds required for consistent pin
             state to be considered updated value.
-            Defaults to 15 milliseconds.
+            Defaults to 20 milliseconds.
         """
         super().__init__(id, Pin.IN)
         self.init(pull=pull, value=value)
@@ -85,7 +85,7 @@ class DebouncedPin(Pin):
         if x is None:
             return self._val
         else:
-            raise ValueError
+            return super().value(x)
 
     def __call__(self, x=None):
         """Equivalent to ``DebouncedPin.value()``."""
@@ -175,16 +175,6 @@ class DebouncedLedPin(DebouncedPin):
         # but this isn't bug free in all ports.
         self._pull = pull
         self.init(Pin.OUT)
-
-    def value(self, x=None):
-        """Read debounced pin value.
-
-        Will inherently be delayed to actual value by ``period`` ms.
-        """
-        if x is None:
-            return self._val
-        else:
-            return Pin.value(self, x)
 
     def _timer_callback(self, timer):
         self.init(Pin.IN, pull=self._pull)
