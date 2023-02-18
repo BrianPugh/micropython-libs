@@ -169,7 +169,7 @@ class DebouncedLedPin(DebouncedPin):
       and provides moderate short-circuit-protection.
     """
 
-    def __init__(self, id, pull, *, value=None, period=20, timer_id=-1):
+    def __init__(self, id, pull=Pin.PULL_UP, *, value=None, period=20, timer_id=-1):
         super().__init__(id, pull=pull, value=value, period=period, timer_id=timer_id)
         # the Pin object is supposed to remember its pull state;
         # but this isn't bug free in all ports.
