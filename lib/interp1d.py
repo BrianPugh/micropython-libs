@@ -56,7 +56,7 @@ class Interpolater:
         y : Union[list, array]
             Corresponding output values.
         """
-        if len(x) != len(y):
+        if len(x) != len(y) or len(x) <= 1:
             raise ValueError
 
         self.x = x
@@ -77,31 +77,32 @@ class Interpolater:
     @classmethod
     def from_dict(cls, d):
         """Create Interpolater from dictionary mapping ``x`` to ``y``."""
-        x = sorted(d.keys())
-        y = [d[z] for z in x]
-        return cls(x, y)
+        return cls(*zip(*sorted(d.items())))
+
+
+def _linear_interpolation(x, y, v):
+    high_i = searchsorted(x, v)
+
+    high_x = x[high_i]
+    if high_x == v:
+        return y[high_i]
+    elif high_i == 0:
+        raise IndexError
+
+    low_x = x[high_i - 1]
+    low_y = y[high_i - 1]
+    high_y = y[high_i]
+
+    p = (v - low_x) / (high_x - low_x)
+
+    return p * high_y + (1 - p) * low_y
 
 
 class Linear(Interpolater):
     """Simple linear interpolation."""
 
     def __call__(self, v):
-        x, y = self.x, self.y
-        high_i = searchsorted(x, v)
-
-        high_x = x[high_i]
-        if high_x == v:
-            return y[high_i]
-        elif high_i == 0:
-            raise IndexError
-
-        low_x = x[high_i - 1]
-        low_y = y[high_i - 1]
-        high_y = y[high_i]
-
-        p = (v - low_x) / (high_x - low_x)
-
-        return p * high_y + (1 - p) * low_y
+        return _linear_interpolation(self.x, self.y, v)
 
 
 class Cubic(Interpolater):
@@ -115,6 +116,10 @@ class Cubic(Interpolater):
         super().__init__(x, y)
 
         size = self.size
+
+        if size == 2:
+            return  # Will perform linear interpolation.
+
         xdiff, ydiff = _diff(x), _diff(y)
 
         # allocate buffer matrices
@@ -149,6 +154,9 @@ class Cubic(Interpolater):
         self.z = z
 
     def __call__(self, v):
+        if self.size == 2:
+            return _linear_interpolation(self.x, self.y, v)
+
         x, y, z = self.x, self.y, self.z
 
         # find index
@@ -179,6 +187,10 @@ class MonoSpline(Interpolater):
 
     def __init__(self, x, y):
         super().__init__(x, y)
+
+        if self.size == 2:
+            return  # Will perform linear interpolation.
+
         self.h = _diff(x)
         self.m = _div(_diff(y), self.h)
         self.b = self._compute_b()
@@ -225,6 +237,9 @@ class MonoSpline(Interpolater):
         return b
 
     def __call__(self, v):
+        if self.size == 2:
+            return _linear_interpolation(self.x, self.y, v)
+
         x = self.x
         i = max(0, searchsorted(x, v) - 1)
         i = min(i, self.size - 2)
