@@ -59,8 +59,8 @@ class Interpolater:
         if len(x) != len(y) or len(x) <= 1:
             raise ValueError
 
-        self.x = x
-        self.y = y
+        self.x = [float(v) for v in x]
+        self.y = [float(v) for v in y]
         self.size = len(x)
 
     def __len__(self):
