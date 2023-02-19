@@ -116,8 +116,8 @@ class Cubic(Interpolater):
         https://stackoverflow.com/a/48085583
     """
 
-    def __init__(self, x, y):
-        super().__init__(x, y)
+    def __init__(self, x, y, *args, **kwargs):
+        super().__init__(x, y, *args, **kwargs)
 
         size = self.size
 
@@ -189,8 +189,8 @@ class MonoSpline(Interpolater):
         https://github.com/antdvid/MonotonicCubicInterpolation
     """
 
-    def __init__(self, x, y):
-        super().__init__(x, y)
+    def __init__(self, x, y, *args, **kwargs):
+        super().__init__(x, y, *args, **kwargs)
 
         if self.size == 2:
             return  # Will perform linear interpolation.
