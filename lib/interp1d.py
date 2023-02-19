@@ -69,6 +69,10 @@ class Interpolater:
 
     def __call__(self, v):
         """Calculate interpolated output value for input ``v``."""
+        return self._compute(v)
+
+    def _compute(self, v):
+        """Subclass computes output value for input ``v``."""
         raise NotImplementedError
 
     def __eq__(self, other):
@@ -101,7 +105,7 @@ def _linear_interpolation(x, y, v):
 class Linear(Interpolater):
     """Simple linear interpolation."""
 
-    def __call__(self, v):
+    def _compute(self, v):
         return _linear_interpolation(self.x, self.y, v)
 
 
@@ -153,7 +157,7 @@ class Cubic(Interpolater):
 
         self.z = z
 
-    def __call__(self, v):
+    def _compute(self, v):
         if self.size == 2:
             return _linear_interpolation(self.x, self.y, v)
 
@@ -236,7 +240,7 @@ class MonoSpline(Interpolater):
         ) / (self.h[-1] + self.h[-2])
         return b
 
-    def __call__(self, v):
+    def _compute(self, v):
         if self.size == 2:
             return _linear_interpolation(self.x, self.y, v)
 
