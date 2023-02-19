@@ -46,7 +46,7 @@ def searchsorted(a, v):
 
 
 class Interpolater:
-    def __init__(self, x, y):
+    def __init__(self, x, y, fill_value=None):
         """Abstract interpolater base class.
 
         Parameters
@@ -55,6 +55,11 @@ class Interpolater:
             Sorted input values.
         y : Union[list, array]
             Corresponding output values.
+        fill_value: Optional[tuple[float, float]]
+            If ``None``, input values outside the range of ``x`` will raise a ``ValueError``.
+            If a two-element ``tuple``, values below ``x[0]`` will return ``fill_value[0]``,
+            and values above ``x[-1]`` will return ``fill_value[1]``.
+            If the string ``"clip"``, will clip inputs to range of ``x``.
         """
         if len(x) != len(y) or len(x) <= 1:
             raise ValueError
@@ -62,6 +67,14 @@ class Interpolater:
         self.x = [float(v) for v in x]
         self.y = [float(v) for v in y]
         self.size = len(x)
+        if fill_value == "clip":
+            self.fill_value = (self.y[0], self.y[-1])
+        elif fill_value is None or (
+            isinstance(fill_value, tuple) and len(fill_value) == 2
+        ):
+            self.fill_value = fill_value
+        else:
+            raise ValueError
 
     def __len__(self):
         """Return the number of datapoints."""
@@ -69,6 +82,16 @@ class Interpolater:
 
     def __call__(self, v):
         """Calculate interpolated output value for input ``v``."""
+        if v < self.x[0]:
+            if self.fill_value:
+                return self.fill_value[0]
+            else:
+                raise ValueError
+        if v > self.x[-1]:
+            if self.fill_value:
+                return self.fill_value[1]
+            else:
+                raise ValueError
         return self._compute(v)
 
     def _compute(self, v):
@@ -90,8 +113,6 @@ def _linear_interpolation(x, y, v):
     high_x = x[high_i]
     if high_x == v:
         return y[high_i]
-    elif high_i == 0:
-        raise IndexError
 
     low_x = x[high_i - 1]
     low_y = y[high_i - 1]

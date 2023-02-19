@@ -48,8 +48,26 @@ def test_linear_out_of_range(v):
     y = [0, 40, 30, 50, 20, 40, 1]
 
     interpolater = interp1d.Linear(x, y)
-    with pytest.raises(IndexError):
+    with pytest.raises(ValueError):
         interpolater(v)
+
+
+def test_linear_out_of_range_fill_value_clip():
+    x = [0, 1, 2, 3, 5, 8, 13]
+    y = [0, 40, 30, 50, 20, 40, 1]
+
+    interpolater = interp1d.Linear(x, y, fill_value="clip")
+    assert 0 == interpolater(-1)
+    assert 1 == interpolater(13.2)
+
+
+def test_linear_out_of_range_fill_value_tuple():
+    x = [0, 1, 2, 3, 5, 8, 13]
+    y = [0, 40, 30, 50, 20, 40, 1]
+
+    interpolater = interp1d.Linear(x, y, fill_value=(-100, 100))
+    assert -100 == interpolater(-1)
+    assert 100 == interpolater(13.2)
 
 
 def test_interpolater_mismatch_lens():
