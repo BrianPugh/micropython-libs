@@ -102,9 +102,9 @@ class Interpolater:
         return self.x == other.x and self.y == other.y
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, d, *args, **kwargs):
         """Create Interpolater from dictionary mapping ``x`` to ``y``."""
-        return cls(*zip(*sorted(d.items())))
+        return cls(*zip(*sorted(d.items())), *args, **kwargs)
 
 
 def _linear_interpolation(x, y, v):
