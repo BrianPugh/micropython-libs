@@ -7,6 +7,12 @@ Buttons and other mechanical switches often generate rapid open/close signals wh
 Naively, a microcontroller may read these rapid open/closing signals as actual multiple button presses.
 Button debouncing can be implemented either in hardware or in software; this module implements debouncing in software.
 
+
+Dependencies
+^^^^^^^^^^^^
+
+No dependencies.
+
 DebouncedPin
 ^^^^^^^^^^^^
 Inherits from micropython's builtin ``machine.Pin``.
