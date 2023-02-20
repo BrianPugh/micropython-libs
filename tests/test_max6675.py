@@ -25,5 +25,5 @@ def test_interpret_buf_open_thermocouple():
 
 def test_interpret_buf_bad_dummy_bit():
     data = bytearray([0b1111_1111, 0b1111_1000])
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         max6675._interpret_buf(data)

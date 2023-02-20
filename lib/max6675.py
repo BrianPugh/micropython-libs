@@ -42,7 +42,7 @@ def _interpret_buf(data):
     """
     dummy = data[0] >> 7
     if dummy != 0:
-        raise Exception("Expected dummy bit to be 0.")
+        raise RuntimeError("Expected dummy bit to be 0.")
     tc_open = (data[1] >> 2) & 0b0000_0001
     if tc_open:
         raise OpenThermocouple
