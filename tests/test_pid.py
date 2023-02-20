@@ -62,7 +62,7 @@ def _plot_simulation(ts, power_percents, water_temperatures, targets):
 
 def test_pid_basic(mock_time, assert_array_equal):
     """Explicit test of the Boiler simulator with PID."""
-    controller = PID(0.1146, 0.00027, 0.08)
+    controller = PID(0.18, 0.01, 0.05)
     controller.setpoint = 90
     ts, power_percents, water_temperatures, targets = _simulate(mock_time, controller)
     _plot_simulation(ts, power_percents, water_temperatures, targets)
