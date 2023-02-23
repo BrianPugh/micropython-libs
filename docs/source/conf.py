@@ -88,3 +88,7 @@ html_theme_options = {
     "includehidden": True,
     "titles_only": False,
 }
+
+html_css_files = [
+    "custom.css",
+]
