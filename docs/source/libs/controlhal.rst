@@ -1,8 +1,30 @@
 ControlHAL
 ==========
 Control Hardware Abstraction Layer.
-Classes to inherit from to simplify reading inputs (sensors) and controlling outputs (actuators).
-The interfaces to these classes are designed so that peripherals can be swapped as easily as possible.
+
+This library provides inheritable base classes that simplifies reading inputs (sensors) and controlling outputs (actuators).
+The interfaces to these classes are designed so that peripherals can be easily swapped.
+Sensor reads and actuator writes are self-caching and self-limiting, meaning they can be efficiently
+in quick succession without worrying about physical implications.
+This allows code to be very loosely coupled, for example:
+
+.. code-block:: python
+
+   # Conventional: need to pass around a cached value.
+   while True:
+       temperature = read_temperature()
+       print(f"temperature: {temperature}°C")
+       if temperature > 100:
+           print("Boiling")
+       sleep(0.5)
+
+   # ControlHAL: read sensor as much as your want.
+   # Rapid repeated reads will return a cached value.
+   while True:
+       print(f"temperature: {sensor()}°C")
+       if sensor() > 100:
+           print("Boiling")
+
 See the source files for more details on function and class APIs.
 
 Dependencies
@@ -10,9 +32,45 @@ Dependencies
 
 No Dependencies
 
+Optional
+~~~~~~~~
+
+* ``ringbuffer`` - Only used in the ``Derivative`` virtual sensor.
+
+Protocol Summary
+^^^^^^^^^^^^^^^^
+The methods for each class in ControlHAL is summarizes in the table below:
+
++-------------------+-------------------------+-----------------------------+----------------------------+-------------------------------------+
+|                   | Sensor                  | Actuator                    | Controller                 | ControlLoop                         |
++===================+=========================+=============================+============================+=====================================+
+| ``__call__()``    | read sensor (SI)        | read setpoint (%)           | N/A                        | predict actuator % from sensor (SI) |
++-------------------+-------------------------+-----------------------------+----------------------------+-------------------------------------+
+| ``__call__(val)`` | ``NotImplementedError`` | write setpoint & device (%) | predict actuator value (%) | args/kwargs are passed to           |
+|                   |                         |                             |                            | ``controller.__call__``             |
+|                   |                         |                             | from sensor value (SI)     |                                     |
++-------------------+-------------------------+-----------------------------+----------------------------+-------------------------------------+
+| ``read()``        | read sensor (SI)        | read setpoint (%)           | read setpoint (SI)         | read sensor (SI)                    |
++-------------------+-------------------------+-----------------------------+----------------------------+-------------------------------------+
+| ``write(val)``    | ``NotImplementedError`` | write setpoint (%) & device | write setpoint (SI)        | write setpoint to controller (SI)   |
++-------------------+-------------------------+-----------------------------+----------------------------+-------------------------------------+
+| get ``setpoint``  | Always returns 0        | setpoint (%)                | setpoint (SI)              | get controller's setpoint (SI)      |
++-------------------+-------------------------+-----------------------------+----------------------------+-------------------------------------+
+| set ``setpoint``  | ``NotImplementedError`` | setpoint (%)                | setpoint (SI)              | set controller's setpoint (SI)      |
++-------------------+-------------------------+-----------------------------+----------------------------+-------------------------------------+
+
+In this table:
+
+* SI_ - sane metric values appropriate for the sensor.
+
+* % - A floating point value ranging from [0, 1] representing 0% ~ 100%.
+
+All classes described inherit from the ``Peripheral`` base class.
+
 Sensor
 ^^^^^^
 Abstract input sensor class.
+
 Input devices should inherit from ``Sensor`` and implement the ``_raw_read`` method.
 Optionally the ``_convert`` may also be implemented.
 The default ``_convert`` method is an identity operation.
@@ -51,8 +109,8 @@ The default ``_convert`` method is an identity operation.
         float
         """
 
-Sensor can be oversampled_ by specifying an integer value ``samples`` to ``__init__``.
-Defaults to ``1`` sample per read.
+Sensor can be oversampled_ by providing an integer value ``samples`` to ``__init__``.
+Defaults to ``1`` sample per read (i.e. no oversampling).
 
 ADCSensor
 ~~~~~~~~~
@@ -84,6 +142,7 @@ The returned derivative will be ``0`` until the internal buffer of length 5 fill
 Actuator
 ^^^^^^^^
 Abstract output actuator class.
+
 Output devices should inherit from ``Actuator`` and implement the ``_raw_write`` method.
 
 .. code-block:: python
@@ -103,7 +162,8 @@ This value is also available via the read-only ``setpoint`` attribute.
 TimeProportionalActuator
 ~~~~~~~~~~~~~~~~~~~~~~~~
 Varies an output actuator via pulse-width-modulation.
-Uses an internal virtual timer.
+
+Uses an internal virtual timer and intended for relatively slow processes like controlling a heater (period > 1 second).
 
 .. code-block:: python
 
@@ -115,20 +175,43 @@ Uses an internal virtual timer.
 PWMActuator
 ~~~~~~~~~~~
 Varies an output actuator via pulse-width-modulation.
+
 Similar to a ``TimeProportionalActuator``, but requires a supplied configured ``PWM`` object.
-Intended for more rapid output frequencies.
+Intended for more rapid output devices, like LEDs or motors.
 
 .. code-block:: python
 
-   pass
+   from controlhal import PWMActuator
+   from machine import Pin, PWM
+
+   pwm = PWM(Pin(12))
+   pwm.freq(500)  # Set frequency to 500Hz
+   actuator = PWMActuator(pwm)  # The PWMActuator class will handle setting duty-cycle
 
 Controller
 ^^^^^^^^^^
-System that consumes sensor data and produces actuator predictions.
+Abstract base class for predictive models that consume sensor data and produce actuator predictions.
+
+At the very least, needs to implement the following methods:
 
 .. code-block:: python
 
-   pass
+   class MyController(Controller):
+       @property
+       def parameters(self) -> Any:
+           """Internal parameters that a controller can be constructed from.
+
+           e.g. for a PID controller, this would be ``(k_p, k_i, k_d)``
+           """
+
+       def __call__(self, *args, **kwargs) -> float:
+           """Given some sensor input, predict what the actuator value
+           should be to drive the system to ``setpoint``.
+           """
+
+The controller setpoint can be written to either by directly writing to ``controller.setpoint`` or by calling the ``controller.write(val)`` method.
+
+For a more indepth example, see the ``pid`` library for a PID controller.
 
 ControlLoop
 ^^^^^^^^^^^
@@ -158,3 +241,4 @@ The example below uses the ``pid`` library.
 
 .. _five-point stencil: https://en.wikipedia.org/wiki/Five-point_stencil
 .. _oversampled: https://en.wikipedia.org/wiki/Oversampling
+.. _SI: https://en.wikipedia.org/wiki/International_System_of_Units
