@@ -223,7 +223,7 @@ class Sensor(Peripheral):
 
         Parameters
         ----------
-        val : Number
+        val : float
 
         Returns
         -------
