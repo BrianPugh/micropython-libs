@@ -1,4 +1,4 @@
-|Python compat| |PyPi| |GHA tests| |Codecov report|
+|Python compat| |PyPi| |GHA tests| |Codecov report| |readthedocs|
 
 .. inclusion-marker-do-not-remove
 
@@ -97,3 +97,6 @@ Repo Folder Structure
 .. |PyPi| image:: https://img.shields.io/pypi/v/libs.svg
         :target: https://pypi.python.org/pypi/libs
 .. _docs/hardware: docs/hardware_spec.rst
+.. |readthedocs| image:: https://readthedocs.org/projects/micropython-libs-brianpugh/badge/?version=latest
+        :target: https://micropython-libs-brianpugh.readthedocs.io/en/latest/?badge=latest
+        :alt: Documentation Status
