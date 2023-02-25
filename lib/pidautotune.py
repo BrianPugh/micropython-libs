@@ -1,7 +1,7 @@
 """A simple and easy to use PID controller in Python.
 
 Adapted from:
-    https://github.com/m-lundberg/simple-pid
+    https://github.com/hirschmann/pid-autotune/blob/master/autotune.py
 
 Depends on:
     * ringbuffer

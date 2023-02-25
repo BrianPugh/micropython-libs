@@ -123,25 +123,6 @@ class DebouncedPin(Pin):
                 ):
                     micropython.schedule(self._user_handler, self)
 
-    def pressed(self):
-        """Return button state.
-
-        If ``PULL_UP``, it assumes button pulls down.
-        If ``PULL_DOWN`` or not set, it assumes button pulls up.
-
-        Returns
-        -------
-        bool
-            ``True`` if button is pressed.
-        """
-        pull = self.pull()
-        if pull == self.PULL_UP:
-            return not self.value()
-        elif pull == self.PULL_DOWN or pull is None:
-            return self.value()
-        else:
-            raise NotImplementedError
-
 
 class DebouncedLedPin(DebouncedPin):
     """Control a LED and read a switch with a single GPIO.

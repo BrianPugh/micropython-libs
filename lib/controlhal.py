@@ -109,6 +109,7 @@ class Peripheral:
             raise ValueError
         self.period = period
         self._last_action_time = None
+        self._setpoint = 0.0
 
     def _should_perform_action(self):
         """Enough has time has elapsed than an action should be performed.
@@ -140,6 +141,15 @@ class Peripheral:
 
     def write(self, val):
         raise NotImplementedError
+
+    @property
+    def setpoint(self):
+        return self._setpoint
+
+    @setpoint.setter
+    def setpoint(self, val):
+        # Let ``write`` set ``self._setpoint``
+        self.write(val)
 
 
 class Sensor(Peripheral):
@@ -223,7 +233,7 @@ class Sensor(Peripheral):
 
         Parameters
         ----------
-        val : Number
+        val : float
 
         Returns
         -------
@@ -306,22 +316,6 @@ class ADCSensor(Sensor):
 
 
 class Actuator(Peripheral):
-    def __init__(self, *, period=None):
-        """Abstract output actuator class.
-
-        Parameters
-        ----------
-        period: Optional[float]
-            Perform actual writes every this many seconds.
-            Calling ``write`` prior to this period will not perform a write.
-        """
-        super().__init__(period=period)
-        self._setpoint = 0
-
-    @property
-    def setpoint(self):
-        return self._setpoint
-
     def write(self, val):
         """Write ``val`` to actuator.
 
@@ -389,7 +383,6 @@ class TimeProportionalActuator(Actuator):
         self.invert = invert
 
         self._period_ms = int(1000 * period)
-        self._setpoint_int = 0  # Integer percent in range [0, 100]
         self._last_action = False
         self._counter = 0
 
@@ -400,22 +393,22 @@ class TimeProportionalActuator(Actuator):
 
     @property
     def setpoint(self):
-        return self._setpoint_int / 100
+        return self._setpoint / 100
 
     @setpoint.setter
     def setpoint(self, val):
-        self._setpoint_int = round(100 * val)
+        self._setpoint = round(100 * val)
 
     def _timer_callback(self, timer):
         if self._counter == 0:
             # only activate on 0 to prevent rapid toggling if
             # setpoint is increased as ~same-rate as counter.
-            if self._counter < self._setpoint_int:
+            if self._counter < self._setpoint:
                 if not self._last_action:
                     self._raw_write(1)
                     self._last_action = True
         else:
-            if self._last_action and self._counter >= self._setpoint_int:
+            if self._last_action and self._counter >= self._setpoint:
                 self._raw_write(0)
                 self._last_action = False
         self._counter = (self._counter + 1) % 100
@@ -486,6 +479,12 @@ class Controller(Peripheral):
     @setpoint.setter
     def setpoint(self, val):
         self._setpoint = val
+
+    def read(self):
+        return self.setpoint
+
+    def write(self, val):
+        self.setpoint = val
 
     @property
     def parameters(self):

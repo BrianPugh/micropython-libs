@@ -1,0 +1,41 @@
+MAX6675
+=======
+Cold-Junction-Compensated K-Thermocouple-to-Digital Converter (0°C to +1024°C).
+
+Dependencies
+^^^^^^^^^^^^
+
+* ``controlhal``
+
+Max6675
+^^^^^^^
+
+The ``Max6675`` class uses a ``SPI`` object and a chip-select pin to handle communications:
+
+.. code-block:: python
+
+   from machine import Pin, SPI
+   from max6675 import Max6675
+
+   spi = SPI(0, mosi=Pin(3, Pin.OUT), miso=Pin(4, Pin.IN), sck=Pin(2, Pin.OUT))
+   max6675 = Max6675(spi, cs=Pin(5, Pin.OUT))
+   temperature_celsius = max6675.read()
+
+The MAX6675 can be polled with a minimum period of 0.22 seconds.
+``Max6675`` inherits from the ``controlhal.Sensor`` class, so it inherits some of
+it's benefits, such as caching the previous temperature value if reads are attempted
+faster than the 0.22 second period.
+
+If the thermocouple becomes disconnected during operation, the next read will cause a
+``OpenThermocouple`` exception to be raised:
+
+.. code-block:: python
+
+   from max6675 import OpenThermocouple
+
+   try:
+       temperature_celsius = max6675.read()
+   except OpenThermocouple:
+       print("Thermocouple disconnected!")
+
+The MAX6675 must be physically reset after the thermocouple has been reconnected.

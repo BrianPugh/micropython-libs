@@ -8,14 +8,14 @@
 Example::
 
     from configstore import ConfigStore
-    config = ConfigStore("settings.json")
+    config = ConfigStore("settings.json")  # Creates file if it doesn't exist.
     config["foo1"] = "bar1"  # Simple key/value store
     config["list_example"] = [1, 2, 3]  # lists work
     config["nested"] = {  # So do nested dictionaries.
         "foo2": "bar2"
     }
 
-    config_reload = ConfigStore.load("settings.json")  # Load an existing config
+    config_reload = ConfigStore("settings.json")  # Load an existing config.
     assert config_reload == config  # They should be the same.
 
     with config:  # defer writes until the contextmanager exits.
