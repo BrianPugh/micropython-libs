@@ -109,7 +109,7 @@ class Peripheral:
             raise ValueError
         self.period = period
         self._last_action_time = None
-        self._setpoint = 0
+        self._setpoint = 0.0
 
     def _should_perform_action(self):
         """Enough has time has elapsed than an action should be performed.
@@ -148,6 +148,7 @@ class Peripheral:
 
     @setpoint.setter
     def setpoint(self, val):
+        # Let ``write`` set ``self._setpoint``
         self.write(val)
 
 
