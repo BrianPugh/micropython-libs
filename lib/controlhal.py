@@ -113,8 +113,10 @@ class Peripheral:
         bool
             ``True`` if an action should be performed.
         """
+        if self._next_action_time is None:
+            return False
         now = ticks_ms()
-        if ticks_diff(self._next_action_time, now) < 0:
+        if ticks_diff(self._next_action_time, now) <= 0:
             self._next_action_time = ticks_add(now, round(1000 * self.period))
             return True
         return False
@@ -337,9 +339,14 @@ class Actuator(Peripheral):
         """
         raise NotImplementedError
 
+    def stop(self):
+        """Emergency stop; sets actuator output to 0 and disables further writes."""
+        super().stop()
+        self._raw_write(0.0)
+
 
 class TimeProportionalActuator(Actuator):
-    def __init__(self, pin=None, period=10.0, invert=False, timer_id=-1):
+    def __init__(self, pin, period, invert=False, timer_id=-1):
         """Create a TimeProportionalActuator object.
 
         Cycle actuators are for controlling binary actuators that have an associated switching cost.
@@ -349,12 +356,11 @@ class TimeProportionalActuator(Actuator):
 
         Parameter
         ---------
-        pin: Optional[machine.Pin]
+        pin: machine.Pin
             If provided, performs digital writes to it.
             Provided ``Pin`` must be configured to ``Pin.OUT`` mode.
         period: float
             Time in seconds for a cycle.
-            Defaults to ``10.0`` seconds.
             Minimum value is ``0.1``; if a faster ``cycle_period`` is desired, look into PWM.
         timer_id : int
             Physical Timer ID to use. Defaults to ``-1`` (virtual timer).

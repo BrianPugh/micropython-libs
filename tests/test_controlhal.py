@@ -14,7 +14,7 @@ from controlhal import (
 
 @pytest.fixture
 def mock_time(mocker):
-    return MockTime.patch(mocker, "controlhal.time_ms")
+    return MockTime.patch(mocker, "controlhal.ticks_ms")
 
 
 def test_autotune_success():
@@ -45,15 +45,16 @@ def test_sensor(mock_time):
         def convert(self, x):
             return x / 10
 
-    test_sensor = TestSensor(period=0.1)
+    mock_time.time = 98
+    test_sensor = TestSensor(period=0.01)  # 10 mS
 
     assert 1 == test_sensor.read()
-    assert 1 == test_sensor.read()
-
-    mock_time.time = 99  # mS
     assert 1 == test_sensor.read()
 
     mock_time.time = 100  # mS
+    assert 1 == test_sensor.read()
+
+    mock_time.time = 108  # mS
 
     assert 2 == test_sensor.read()
     assert 2 == test_sensor.read()
