@@ -60,7 +60,7 @@ Then, define your project name and dependencies in your project's ``pyproject.to
    ringbuffer = "https://github.com/BrianPugh/micropython-libs/blob/main/lib/ringbuffer.py"
 
    [tool.pytest.ini_options]
-   pythonpath = ".belay-lib"
+   pythonpath = ".belay/dependencies/main"
 
 Then, to actually download the dependencies (and update them if already downloaded), run the following in your project's root directory:
 
