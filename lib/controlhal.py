@@ -181,9 +181,9 @@ class Sensor(Peripheral):
         """
         super().__init__(period=period)
         self._samples = samples
-        self._last_read = 0
+        self._last_read = 0.0
 
-    def read(self):
+    def read(self) -> float:
         """Oversample sensor, and convert to appropriate value."""
         if self._should_perform_action():
             val = sum(self._raw_read() for _ in range(self._samples))
@@ -191,7 +191,7 @@ class Sensor(Peripheral):
             self._last_read = self._convert(val)
         return self._last_read
 
-    def _raw_read(self):
+    def _raw_read(self) -> float:
         """Read sensor.
 
         To be implemented by subclass.
@@ -208,7 +208,7 @@ class Sensor(Peripheral):
         """
         raise NotImplementedError
 
-    def _convert(self, val):
+    def _convert(self, val) -> float:
         """Convert raw-value from ``_raw_read`` to a SI base unit float.
 
         Used to only call conversion once per oversample, rather than once per sample.
