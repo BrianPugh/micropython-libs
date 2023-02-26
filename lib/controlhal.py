@@ -44,24 +44,16 @@ Typical usecase:
     while True:
         boiler()  # update feedback loop
 """
-import time
-
 try:
-    import micropython  # pyright: ignore[reportMissingImports]
-except ImportError:
-    micropython = None
+    from machine import Timer
+    from utime import ticks_add, ticks_diff, ticks_ms
+except ImportError:  # pramga: no cover
+    import time
 
-if micropython:
-    from machine import Timer  # pyright: ignore[reportMissingImports]
-
-    time_ms = time.ticks_ms  # pyright: ignore[reportGeneralTypeIssues]
-    ticks_diff = time.ticks_diff  # pyright: ignore[reportGeneralTypeIssues]
-    const = micropython.const
-else:  # pragma: no cover
     Timer = None
-    time_ms = lambda: int(round(time.monotonic_ns() / 1_000_000))  # noqa: E731
+    ticks_add = lambda x, y: x + y  # noqa: E731
     ticks_diff = lambda x, y: x - y  # noqa: E731
-    const = lambda x: x  # noqa: E731
+    ticks_ms = lambda: int(round(time.monotonic_ns() / 1_000_000))  # noqa: E731
 
 
 class AutotuneComplete(Exception):
@@ -108,25 +100,22 @@ class Peripheral:
         elif period < 0:
             raise ValueError
         self.period = period
-        self._last_action_time = None
+        self._next_action_time = ticks_add(ticks_ms(), round(period * 1000))
         self._setpoint = 0.0
 
     def _should_perform_action(self):
         """Enough has time has elapsed than an action should be performed.
 
-        Not idempotent; internally updates ``_last_action_time`` state.
+        Not idempotent; internally may update ``_next_action_time`` state.
 
         Returns
         -------
         bool
             ``True`` if an action should be performed.
         """
-        now = time_ms()
-        if (
-            self._last_action_time is None
-            or ticks_diff(now, self._last_action_time) >= 1000 * self.period
-        ):
-            self._last_action_time = now
+        now = ticks_ms()
+        if ticks_diff(self._next_action_time, now) < 0:
+            self._next_action_time = ticks_add(now, round(1000 * self.period))
             return True
         return False
 
@@ -266,7 +255,7 @@ class Derivative(Sensor):
             val_buffer, time_buffer = self._val_buffer, self._time_buffer
 
             val_buffer.append(self._sensor.read())
-            time_buffer.append(time_ms())
+            time_buffer.append(ticks_ms())
 
             if self._val_buffer.full:
                 # Five-point stencil 1D Derivative Approximation
