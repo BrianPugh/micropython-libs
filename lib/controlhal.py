@@ -377,6 +377,7 @@ class TimeProportionalActuator(Actuator):
         self.pin = pin
         self.invert = invert
 
+        self._setpoint_100x = 0  # Setpoint as an integer percent in range [0, 100]
         self._period_ms = int(1000 * period)
         self._last_action = False
         self._counter = 0
@@ -388,22 +389,23 @@ class TimeProportionalActuator(Actuator):
 
     @property
     def setpoint(self):
-        return self._setpoint / 100
+        return self._setpoint
 
     @setpoint.setter
     def setpoint(self, val):
-        self._setpoint = round(100 * val)
+        self._setpoint = val
+        self._setpoint_100x = round(100 * val)
 
     def _timer_callback(self, timer):
         if self._counter == 0:
             # only activate on 0 to prevent rapid toggling if
             # setpoint is increased as ~same-rate as counter.
-            if self._counter < self._setpoint:
+            if self._counter < self._setpoint_100x:
                 if not self._last_action:
                     self._raw_write(1)
                     self._last_action = True
         else:
-            if self._last_action and self._counter >= self._setpoint:
+            if self._last_action and self._counter >= self._setpoint_100x:
                 self._raw_write(0)
                 self._last_action = False
         self._counter = (self._counter + 1) % 100
