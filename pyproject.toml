@@ -38,6 +38,7 @@ pytest-mock = "^3.7.0"
 matplotlib = "^3.6.1"
 numpy = "^1.23.4"
 pytest-skip-slow = "^0.0.3"
+micropython-rp2-stubs = "^1.19.1.post11"
 
 [tool.coverage.run]
 branch = true
@@ -85,9 +86,14 @@ exclude_dirs = [
 [tool.pyright]
 extraPaths = [
     "./lib/",
+    ".belay/dependencies/main",
 ]
 venvPath = "."
 venv = ".venv"
+ignore = [
+    "**/*_pio.py",
+]
+reportMissingModuleSource = "none"  # for micropython stubs
 
 [tool.pytest.ini_options]
 pythonpath = "lib"
