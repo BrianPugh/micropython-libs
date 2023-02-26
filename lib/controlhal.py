@@ -100,7 +100,7 @@ class Peripheral:
         elif period < 0:
             raise ValueError
         self.period = period
-        self._next_action_time = ticks_add(ticks_ms(), round(period * 1000))
+        self._next_action_time = ticks_ms()
         self._setpoint = 0.0
 
     def _should_perform_action(self):
