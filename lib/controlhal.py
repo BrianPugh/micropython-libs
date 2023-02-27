@@ -452,11 +452,6 @@ class PWMActuator(Actuator):
     def _raw_write(self, val):
         self.pwm.duty_u16(round(val * 65535))
 
-    def estop(self):
-        """Emergency stop; sets actuator output to 0 and disables further writes."""
-        super().estop()
-        self._raw_write(0)
-
 
 class Controller(Peripheral):
     """System that consumes sensor data and produces actuator predictions.
