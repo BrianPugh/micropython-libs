@@ -53,9 +53,9 @@ The methods for each class in ControlHAL is summarizes in the table below:
 +-------------------+-------------------------+------------------------------+----------------------------+--------------------------------------+
 | ``write(val)``    | ``NotImplementedError`` | Write setpoint (%) & device. | Write setpoint (SI).       | Write setpoint to controller (SI).   |
 +-------------------+-------------------------+------------------------------+----------------------------+--------------------------------------+
-| ``estop()``       | No effect.              | Writes ``0.0`` to setpoint   | No effect.                 | Propagate ``estop`` call to all      |
-|                   |                         | & device. Disables future    |                            | attributes and controllers.          |
-|                   |                         | writes.                      |                            |                                      |
+| ``estop()``       | Prevents future reads.  | Writes ``0.0`` to setpoint   | No effect.                 | Propagate ``estop`` call to all      |
+|                   | Subsequent reads return | & device. Disables future    |                            | attributes and controllers.          |
+|                   | last cached value.      | writes.                      |                            |                                      |
 +-------------------+-------------------------+------------------------------+----------------------------+--------------------------------------+
 | get ``setpoint``  | Always returns 0.       | Get setpoint (%).            | Get setpoint (SI).         | Get controller's setpoint (SI).      |
 +-------------------+-------------------------+------------------------------+----------------------------+--------------------------------------+

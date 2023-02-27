@@ -236,10 +236,6 @@ class Sensor(Peripheral):
         """
         return val
 
-    def estop(self):
-        # No real emergency stop action for a sensor.
-        pass
-
 
 class Derivative(Sensor):
     def __init__(self, sensor):
