@@ -44,24 +44,16 @@ Typical usecase:
     while True:
         boiler()  # update feedback loop
 """
-import time
-
 try:
-    import micropython  # pyright: ignore[reportMissingImports]
-except ImportError:
-    micropython = None
+    from machine import Timer
+    from utime import ticks_add, ticks_diff, ticks_ms
+except ImportError:  # pramga: no cover
+    import time
 
-if micropython:
-    from machine import Timer  # pyright: ignore[reportMissingImports]
-
-    time_ms = time.ticks_ms  # pyright: ignore[reportGeneralTypeIssues]
-    ticks_diff = time.ticks_diff  # pyright: ignore[reportGeneralTypeIssues]
-    const = micropython.const
-else:  # pragma: no cover
     Timer = None
-    time_ms = lambda: int(round(time.monotonic_ns() / 1_000_000))  # noqa: E731
+    ticks_add = lambda x, y: x + y  # noqa: E731
     ticks_diff = lambda x, y: x - y  # noqa: E731
-    const = lambda x: x  # noqa: E731
+    ticks_ms = lambda: int(round(time.monotonic_ns() / 1_000_000))  # noqa: E731
 
 
 class AutotuneComplete(Exception):
@@ -108,25 +100,24 @@ class Peripheral:
         elif period < 0:
             raise ValueError
         self.period = period
-        self._last_action_time = None
+        self._next_action_time = ticks_ms()
         self._setpoint = 0.0
 
     def _should_perform_action(self):
         """Enough has time has elapsed than an action should be performed.
 
-        Not idempotent; internally updates ``_last_action_time`` state.
+        Not idempotent; internally may update ``_next_action_time`` state.
 
         Returns
         -------
         bool
             ``True`` if an action should be performed.
         """
-        now = time_ms()
-        if (
-            self._last_action_time is None
-            or ticks_diff(now, self._last_action_time) >= 1000 * self.period
-        ):
-            self._last_action_time = now
+        if self._next_action_time is None:
+            return False
+        now = ticks_ms()
+        if ticks_diff(self._next_action_time, now) <= 0:
+            self._next_action_time = ticks_add(now, round(1000 * self.period))
             return True
         return False
 
@@ -141,6 +132,10 @@ class Peripheral:
 
     def write(self, val):
         raise NotImplementedError
+
+    def estop(self):
+        """Emergency stop; sets peripheral to a safe state and disables further actions."""
+        self._next_action_time = None
 
     @property
     def setpoint(self):
@@ -192,9 +187,9 @@ class Sensor(Peripheral):
         """
         super().__init__(period=period)
         self._samples = samples
-        self._last_read = 0
+        self._last_read = 0.0
 
-    def read(self):
+    def read(self) -> float:
         """Oversample sensor, and convert to appropriate value."""
         if self._should_perform_action():
             val = sum(self._raw_read() for _ in range(self._samples))
@@ -202,7 +197,7 @@ class Sensor(Peripheral):
             self._last_read = self._convert(val)
         return self._last_read
 
-    def _raw_read(self):
+    def _raw_read(self) -> float:
         """Read sensor.
 
         To be implemented by subclass.
@@ -219,7 +214,7 @@ class Sensor(Peripheral):
         """
         raise NotImplementedError
 
-    def _convert(self, val):
+    def _convert(self, val) -> float:
         """Convert raw-value from ``_raw_read`` to a SI base unit float.
 
         Used to only call conversion once per oversample, rather than once per sample.
@@ -266,7 +261,7 @@ class Derivative(Sensor):
             val_buffer, time_buffer = self._val_buffer, self._time_buffer
 
             val_buffer.append(self._sensor.read())
-            time_buffer.append(time_ms())
+            time_buffer.append(ticks_ms())
 
             if self._val_buffer.full:
                 # Five-point stencil 1D Derivative Approximation
@@ -348,9 +343,15 @@ class Actuator(Peripheral):
         """
         raise NotImplementedError
 
+    def estop(self):
+        """Emergency stop; sets actuator output to 0 and disables further writes."""
+        super().estop()
+        self._setpoint = 0.0
+        self._raw_write(0.0)
+
 
 class TimeProportionalActuator(Actuator):
-    def __init__(self, pin=None, period=10.0, invert=False, timer_id=-1):
+    def __init__(self, pin, period, invert=False, timer_id=-1):
         """Create a TimeProportionalActuator object.
 
         Cycle actuators are for controlling binary actuators that have an associated switching cost.
@@ -360,12 +361,11 @@ class TimeProportionalActuator(Actuator):
 
         Parameter
         ---------
-        pin: Optional[machine.Pin]
+        pin: machine.Pin
             If provided, performs digital writes to it.
             Provided ``Pin`` must be configured to ``Pin.OUT`` mode.
         period: float
             Time in seconds for a cycle.
-            Defaults to ``10.0`` seconds.
             Minimum value is ``0.1``; if a faster ``cycle_period`` is desired, look into PWM.
         timer_id : int
             Physical Timer ID to use. Defaults to ``-1`` (virtual timer).
@@ -382,6 +382,7 @@ class TimeProportionalActuator(Actuator):
         self.pin = pin
         self.invert = invert
 
+        self._setpoint_100x = 0  # Setpoint as an integer percent in range [0, 100]
         self._period_ms = int(1000 * period)
         self._last_action = False
         self._counter = 0
@@ -393,22 +394,23 @@ class TimeProportionalActuator(Actuator):
 
     @property
     def setpoint(self):
-        return self._setpoint / 100
+        return self._setpoint
 
     @setpoint.setter
     def setpoint(self, val):
-        self._setpoint = round(100 * val)
+        self._setpoint = val
+        self._setpoint_100x = round(100 * val)
 
     def _timer_callback(self, timer):
         if self._counter == 0:
             # only activate on 0 to prevent rapid toggling if
             # setpoint is increased as ~same-rate as counter.
-            if self._counter < self._setpoint:
+            if self._counter < self._setpoint_100x:
                 if not self._last_action:
                     self._raw_write(1)
                     self._last_action = True
         else:
-            if self._last_action and self._counter >= self._setpoint:
+            if self._last_action and self._counter >= self._setpoint_100x:
                 self._raw_write(0)
                 self._last_action = False
         self._counter = (self._counter + 1) % 100
@@ -425,6 +427,11 @@ class TimeProportionalActuator(Actuator):
         if self.invert:
             val = not val
         self.pin(val)
+
+    def estop(self):
+        """Emergency stop; sets actuator output to 0 and disables further writes."""
+        self._timer.deinit()
+        super().estop()
 
 
 class PWMActuator(Actuator):
@@ -529,6 +536,10 @@ class Controller(Peripheral):
         """
         raise NotImplementedError
 
+    def estop(self):
+        # No real emergency stop action for a controller.
+        pass
+
 
 class ControlLoop(Peripheral):
     def __init__(self, actuator, sensor, controller, *, period=None):
@@ -607,3 +618,16 @@ class ControlLoop(Peripheral):
         val = self.sensor()
         power_target = self.controller(val, *args, **kwargs)
         self.actuator(power_target)
+
+    def estop(self):
+        super().estop()
+        for attr in self.__dict__.values():
+            try:
+                attr.estop()
+            except AttributeError:
+                pass
+        for controller in self._controllers:
+            try:
+                controller.estop()
+            except AttributeError:
+                pass

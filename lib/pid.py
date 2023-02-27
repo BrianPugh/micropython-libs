@@ -124,7 +124,9 @@ class PID(Controller):
             Control variable (what the output actuator should be set to).
 
         """
-        if not self.auto_mode:
+        # _next_action_time isn't really used in this implementation,
+        # but this ``None`` check is for estop support.
+        if not self.auto_mode or self._next_action_time is None:
             return self._last_output
 
         now = time_ms()
