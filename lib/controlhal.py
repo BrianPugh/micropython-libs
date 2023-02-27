@@ -542,7 +542,7 @@ class Controller(Peripheral):
         raise NotImplementedError
 
     def estop(self):
-        # No real emergency stop action for a sensor.
+        # No real emergency stop action for a controller.
         pass
 
 
