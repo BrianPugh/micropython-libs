@@ -133,6 +133,10 @@ class Peripheral:
     def write(self, val):
         raise NotImplementedError
 
+    def estop(self):
+        """Emergency stop; sets peripheral to a safe state and disables further actions."""
+        self._next_action_time = None
+
     @property
     def setpoint(self):
         return self._setpoint
@@ -231,6 +235,10 @@ class Sensor(Peripheral):
         float
         """
         return val
+
+    def estop(self):
+        # No real emergency stop action for a sensor.
+        pass
 
 
 class Derivative(Sensor):
@@ -339,9 +347,10 @@ class Actuator(Peripheral):
         """
         raise NotImplementedError
 
-    def stop(self):
+    def estop(self):
         """Emergency stop; sets actuator output to 0 and disables further writes."""
-        super().stop()
+        super().estop()
+        self._setpoint = 0.0
         self._raw_write(0.0)
 
 
@@ -423,6 +432,11 @@ class TimeProportionalActuator(Actuator):
             val = not val
         self.pin(val)
 
+    def estop(self):
+        """Emergency stop; sets actuator output to 0 and disables further writes."""
+        self._timer.deinit()
+        super().estop()
+
 
 class PWMActuator(Actuator):
     def __init__(self, pwm, period=None):
@@ -441,6 +455,11 @@ class PWMActuator(Actuator):
 
     def _raw_write(self, val):
         self.pwm.duty_u16(round(val * 65535))
+
+    def estop(self):
+        """Emergency stop; sets actuator output to 0 and disables further writes."""
+        super().estop()
+        self._raw_write(0)
 
 
 class Controller(Peripheral):
@@ -526,6 +545,10 @@ class Controller(Peripheral):
         """
         raise NotImplementedError
 
+    def estop(self):
+        # No real emergency stop action for a sensor.
+        pass
+
 
 class ControlLoop(Peripheral):
     def __init__(self, actuator, sensor, controller, *, period=None):
@@ -604,3 +627,16 @@ class ControlLoop(Peripheral):
         val = self.sensor()
         power_target = self.controller(val, *args, **kwargs)
         self.actuator(power_target)
+
+    def estop(self):
+        super().estop()
+        for attr in self.__dict__.values():
+            try:
+                attr.estop()
+            except AttributeError:
+                pass
+        for controller in self._controllers:
+            try:
+                controller.estop()
+            except AttributeError:
+                pass
