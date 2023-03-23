@@ -26,6 +26,8 @@ This allows code to be very loosely coupled, for example:
            print("Boiling")
 
 See the source files for more details on function and class APIs.
+Anytime that a ``machine.Pin`` is referenced, a ``machine.Signal``
+may actually be a more appropriate choice.
 
 Dependencies
 ^^^^^^^^^^^^

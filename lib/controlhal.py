@@ -351,7 +351,7 @@ class Actuator(Peripheral):
 
 
 class TimeProportionalActuator(Actuator):
-    def __init__(self, pin, period, invert=False, timer_id=-1):
+    def __init__(self, pin, period, timer_id=-1):
         """Create a TimeProportionalActuator object.
 
         Cycle actuators are for controlling binary actuators that have an associated switching cost.
@@ -369,10 +369,6 @@ class TimeProportionalActuator(Actuator):
             Minimum value is ``0.1``; if a faster ``cycle_period`` is desired, look into PWM.
         timer_id : int
             Physical Timer ID to use. Defaults to ``-1`` (virtual timer).
-        invert: bool
-            Invert writes to provided ``pin``.
-            I.e. device has ``0`` for on and ``1`` for off.
-            Does nothing if ``pin`` is not provided.
         """
         if period < 0.1:
             raise ValueError("cycle_period must be at least 0.1 seconds.")
@@ -380,7 +376,6 @@ class TimeProportionalActuator(Actuator):
         super().__init__(period=period)
 
         self.pin = pin
-        self.invert = invert
 
         self._setpoint_100x = 0  # Setpoint as an integer percent in range [0, 100]
         self._period_ms = int(1000 * period)
@@ -423,9 +418,6 @@ class TimeProportionalActuator(Actuator):
     def _raw_write(self, val):
         if self.pin is None:
             return
-        val = bool(val)
-        if self.invert:
-            val = not val
         self.pin(val)
 
     def estop(self):
