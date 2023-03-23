@@ -37,25 +37,6 @@ repos:
     hooks:
       - id: blacken-docs
 
-  - repo: https://github.com/kynan/nbstripout
-    rev: 0.6.1
-    hooks:
-      - id: nbstripout
-
-  - repo: https://github.com/nbQA-dev/nbQA
-    rev: 1.6.3
-    hooks:
-      - id: nbqa-isort
-        args: ["--profile=black"]
-      - id: nbqa-black
-        args:
-          - "--target-version=py36"
-          - "--target-version=py37"
-          - "--target-version=py38"
-          - "--target-version=py39"
-          - "--target-version=py310"
-      - id: nbqa-flake8
-
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.10.0
     hooks:
