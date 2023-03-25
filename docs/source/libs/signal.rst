@@ -38,11 +38,3 @@ input/output values.
 
    val = signal()  # Read input; this also abides by ``invert``.
    val = signal.value()
-
-
-   def foo():  # takes no arguments
-       return 42
-
-
-   oversample_foo = Oversample(foo, 64)  # Will sample foo 64 times each call
-   oversampled_value = oversample_foo()
