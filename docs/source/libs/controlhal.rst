@@ -117,6 +117,25 @@ The default ``_convert`` method is an identity operation.
 Sensor can be oversampled_ by providing an integer value ``samples`` to ``__init__``.
 Defaults to ``1`` sample per read (i.e. no oversampling).
 
+MultiSensor
+~~~~~~~~~~~
+Collect a set of sensors into a single class.
+Can be used for more complex controllers while re-using other classes in this library.
+
+.. code-block:: python
+
+   multi_sensor = MultiSensor(sensor1, sensor2, sensor3)
+   # Will read and return all 3 sensors
+   sensor1_val, sensor2_val, sensor3_val = multi_sensor.read()
+
+MultiSensor can be subclassed to provide more structure/order to the constructor:
+
+.. code-block:: python
+
+   class MotorSensor(MultiSensor):
+       def __init__(self, position, current, temperature):
+           super().__init__(position, current, temperature)
+
 ADCSensor
 ~~~~~~~~~
 Sensor using an ADC input.

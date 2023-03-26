@@ -237,6 +237,30 @@ class Sensor(Peripheral):
         return val
 
 
+class MultiSensor(Sensor):
+    def __init__(self, *sensors):
+        """Combine multiple sensors into a single class.
+
+        Reads will return a tuple of sensor collection in same order.
+
+        Parameters
+        ----------
+        sensors: Sensor
+        """
+        self.sensors = sensors
+
+    def read(self):
+        return tuple(sensor.read() for sensor in self.sensors)
+
+    @property
+    def period(self):
+        return min(sensor.period for sensor in self.sensors)
+
+    def estop(self):
+        for sensor in self.sensors:
+            sensor.estop()
+
+
 class Derivative(Sensor):
     def __init__(self, sensor):
         """Time-derivative of a sensor.
