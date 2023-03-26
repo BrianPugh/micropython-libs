@@ -531,11 +531,15 @@ class Controller(Peripheral):
         """Predict actuator value for current sensor value.
 
         May take in additional values.
+        If multiple sensor inputs are required, it is recommended
+        that all sensor values get packed into ``val``.
+        See also: MultiSensor
 
         Parameters
         ----------
-        val: float
-            Sensor value to predict actuator value.
+        val: tuple or float
+            Sensor return value to predict actuator value.
+            If using a ``MultiSensor``, this would be a tuple.
 
         Raises
         ------
