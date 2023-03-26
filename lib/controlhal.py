@@ -131,6 +131,10 @@ class Peripheral:
         raise NotImplementedError
 
     def write(self, val):
+        """Write to device.
+
+        Internally should set ``self._setpoint``.
+        """
         raise NotImplementedError
 
     def estop(self):
@@ -145,6 +149,52 @@ class Peripheral:
     def setpoint(self, val):
         # Let ``write`` set ``self._setpoint``
         self.write(val)
+
+
+class Multi(Peripheral):
+    def __init__(self, *peripherals):
+        """Combine multiple peripherals into a single object.
+
+        Reads will return a tuple of sensor collection in same order.
+
+        Parameters
+        ----------
+        sensors: Peripheral
+        """
+        self.peripherals = peripherals
+
+    def read(self):
+        return tuple(peripheral.read() for peripheral in self.peripherals)
+
+    def write(self, vals):
+        if len(vals) != len(self.peripherals):
+            raise ValueError(
+                f"{len(vals)} values specified; expected {len(self.peripherals)}"
+            )
+        return tuple(
+            peripheral.write(val) for val, peripheral in zip(vals, self.peripherals)
+        )
+
+    @property
+    def period(self):
+        return min(peripheral.period for peripheral in self.peripherals)
+
+    @property
+    def setpoint(self):
+        return tuple(peripheral.setpoint for peripheral in self.peripherals)
+
+    @setpoint.setter
+    def setpoint(self, vals):
+        if len(vals) != len(self.peripherals):
+            raise ValueError(
+                f"{len(vals)} values specified; expected {len(self.peripherals)}"
+            )
+        for val, peripheral in zip(vals, self.peripherals):
+            peripheral.setpoint = val
+
+    def estop(self):
+        for peripheral in self.peripherals:
+            peripheral.estop()
 
 
 class Sensor(Peripheral):
@@ -235,30 +285,6 @@ class Sensor(Peripheral):
         float
         """
         return val
-
-
-class MultiSensor(Sensor):
-    def __init__(self, *sensors):
-        """Combine multiple sensors into a single class.
-
-        Reads will return a tuple of sensor collection in same order.
-
-        Parameters
-        ----------
-        sensors: Sensor
-        """
-        self.sensors = sensors
-
-    def read(self):
-        return tuple(sensor.read() for sensor in self.sensors)
-
-    @property
-    def period(self):
-        return min(sensor.period for sensor in self.sensors)
-
-    def estop(self):
-        for sensor in self.sensors:
-            sensor.estop()
 
 
 class Derivative(Sensor):

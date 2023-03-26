@@ -3,7 +3,7 @@ ControlHAL
 Control Hardware Abstraction Layer.
 
 This library provides inheritable base classes that simplifies reading inputs (sensors) and controlling outputs (actuators).
-The interfaces to these classes are designed so that peripherals can be easily swapped.
+The interfaces to these classes relies heavily on both inheritance and composition so that peripherals can be easily swapped and combined.
 Sensor reads and actuator writes are self-caching and self-limiting, meaning they can be efficiently
 in quick succession without worrying about physical implications.
 This allows code to be very loosely coupled, for example:
@@ -27,7 +27,7 @@ This allows code to be very loosely coupled, for example:
 
 See the source files for more details on function and class APIs.
 Anytime that a ``machine.Pin`` is referenced, a ``machine.Signal``
-may actually be a more appropriate choice.
+or ``signal.Signal`` may be a more appropriate choice.
 
 Dependencies
 ^^^^^^^^^^^^
@@ -49,7 +49,7 @@ The methods for each class in ControlHAL is summarizes in the table below:
 | ``__call__()``    | Read sensor (SI).       | Read setpoint (%).           | N/A                        | Predict actuator % from sensor (SI). |
 +-------------------+-------------------------+------------------------------+----------------------------+--------------------------------------+
 | ``__call__(val)`` | ``NotImplementedError`` | Write setpoint & device (%). | Predict actuator value (%) | Args/Kwargs are passed to            |
-|                   |                         |                              | from sensor value (SI).    | ``controller.__call__``.             |
+|                   |                         |                              | from sensor(s) value (SI). | ``controller.__call__``.             |
 +-------------------+-------------------------+------------------------------+----------------------------+--------------------------------------+
 | ``read()``        | Read sensor (SI).       | Read setpoint (%).           | Read setpoint (SI).        | Read sensor (SI).                    |
 +-------------------+-------------------------+------------------------------+----------------------------+--------------------------------------+
@@ -116,25 +116,6 @@ The default ``_convert`` method is an identity operation.
 
 Sensor can be oversampled_ by providing an integer value ``samples`` to ``__init__``.
 Defaults to ``1`` sample per read (i.e. no oversampling).
-
-MultiSensor
-~~~~~~~~~~~
-Collect a set of sensors into a single class.
-Can be used for more complex controllers while re-using other classes in this library.
-
-.. code-block:: python
-
-   multi_sensor = MultiSensor(sensor1, sensor2, sensor3)
-   # Will read and return all 3 sensors
-   sensor1_val, sensor2_val, sensor3_val = multi_sensor.read()
-
-MultiSensor can be subclassed to provide more structure/order to the constructor:
-
-.. code-block:: python
-
-   class MotorSensor(MultiSensor):
-       def __init__(self, position, current, temperature):
-           super().__init__(position, current, temperature)
 
 ADCSensor
 ~~~~~~~~~
@@ -211,6 +192,28 @@ Intended for more rapid output devices, like LEDs or motors.
    pwm = PWM(Pin(12))
    pwm.freq(500)  # Set frequency to 500Hz
    actuator = PWMActuator(pwm)  # The PWMActuator class will handle setting duty-cycle
+
+Multi
+~~~~~
+Collect a set of peripherals into a single class.
+Can be used for more complex controllers while re-using other classes in this library.
+
+.. code-block:: python
+
+   from controlhal import Multi
+
+   multi_sensor = Multi(sensor1, sensor2, sensor3)
+   # Will read and return all 3 sensors
+   sensor1_val, sensor2_val, sensor3_val = multi_sensor.read()
+
+Multi can be subclassed to provide more structure/order to the constructor:
+
+.. code-block:: python
+
+   class MotorSensor(MultiSensor):
+       def __init__(self, position, current, temperature):
+           super().__init__(position, current, temperature)
+
 
 Controller
 ^^^^^^^^^^
