@@ -34,6 +34,7 @@ class _BufferedWriter:
             self.flush()
 
     def write_reference(self, pos, size):
+        size = size - 3  # Minimum stored size is 3
         self.flags[0] |= 1 << self.n_tokens
         self.buf[self.buf_i : self.buf_i + 2] = (pos << 4 | size).to_bytes(2, "little")
         self.buf_i += 2
@@ -68,19 +69,24 @@ class Compressor:
     def compress(self, data):
         data_start = 0
         while data_start < len(data):
+            if data_start % 10000 == 0:
+                print(f"{100 * data_start / len(data)}%")
+
             search_i = 0
             match_size = 1
             for size in range(3, 19):  # start search at length(3) token
                 data_end = data_start + size
                 if data_end >= len(data):
                     break
-                string = data[data_start:data_end]
+                next_string = data[data_start:data_end]
                 try:
-                    search_i = self.buf.index(string, search_i)
+                    search_i = self.buf.index(next_string, search_i)
                 except ValueError:
                     break  # Not Found
+                string = next_string
                 match_size = size
 
+            # print(f"{match_size=} {search_i=} {self.buf_start=} {len(self.buf)=}")
             if match_size > 1:
                 self._writer.write_reference(search_i, match_size)
 
@@ -91,16 +97,21 @@ class Compressor:
                     # At buffer wraparound point; Need to do 2 writes
                     self.buf[self.buf_start : len(self.buf)] = string[:-start_length]
                     self.buf[:start_length] = string[-start_length:]
+                    assert len(self.buf) == 4096
                 else:
+                    assert len(self.buf) == 4096
                     self.buf[self.buf_start : buf_end] = string
+                    assert len(self.buf) == 4096
             else:
                 self.buf[self.buf_start] = data[data_start]
                 self._writer.write_literal(data[data_start])
+                assert len(self.buf) == 4096
 
             self.buf_start += match_size
             if self.buf_start >= 4096:
                 self.buf_start -= 4096
 
+            assert len(self.buf) == 4096
             data_start += match_size
 
     def flush(self):
@@ -116,18 +127,28 @@ class Decompressor:
         raise NotImplementedError
 
 
-from io import BytesIO
+@profile
+def main():
+    from io import BytesIO
 
-test_string = b"The quick brown fox jumped over the lazy dog" * 2
-print(f"{len(test_string)=}")
-with BytesIO() as f:
-    compressor = Compressor(f)
-    compressor.compress(test_string)
-    compressor.flush()
-    print(f"compressed={f.tell()}")
+    # test_string = b"The quick brown fox jumped over the lazy dog" * 2
+    with open("enwik8", "rb") as f:
+        test_string = f.read()
+    print(f"{len(test_string)=}")
+    with BytesIO() as f:
+        compressor = Compressor(f)
+        compressor.compress(test_string)
+        compressor.flush()
+        compressed_len = f.tell()
+        print(f"compressed={compressed_len}")
+        print(f"ratio: {len(test_string) / compressed_len:.3f}")
 
-    f.seek(0)
-    decompressor = Decompressor(f)
-    result = decompressor.decompress()
-assert result == test_string
-print(f"{len(test_string)=}")
+        f.seek(0)
+        decompressor = Decompressor(f)
+        result = decompressor.decompress()
+    assert result == test_string
+    print(f"{len(test_string)=}")
+
+
+if __name__ == "__main__":
+    main()
