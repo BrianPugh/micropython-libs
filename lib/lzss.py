@@ -1,53 +1,28 @@
 """Modified LZSS encoding for efficient micropython.
 
 The header is a single byte where:
-* First 3 bits are (window_bits - 8).
+* First 3 bits represent (window_bits minus 8).
   e.g. A 12-bit window is encoded as the number 4, 0b100.
   This means the smallest window is 256 bytes, and largest is 32768.
-* The next 2 bits are (size_bits - 4).
+* The next 2 bits represent (size_bits minus 4).
   e.g. a 4-bit size (max value 19) is encoded as the number 0, 0b00
 * Remaining 3 bits are reserved (currently 0b000)
 
 
-Token encoding:
+Token Encoding
+--------------
+* Each token is (1 + window_bits + size_bits) bits
+* First bit is the ``is_literal`` flag (0 = reference, 1 = literal)
 
-* Each token is 16 bits (2 bytes)
-* 12 bits window
-* 4 bits length
-* actual length is length + 3 since tokens <=2 are not encoded;
-  so actual lengths will be in range [3, 18].
-* a 1 byte flag bitfield will represent the type of the next 8 references/literals.
-
-Compromises:
-    * if a string occurs at the ringbuffer wraparound point, it won't be detected.
-      This results in slightly lower compression ratios for faster operation and
-      smaller/simpler implementation.
+Implementation Details
+----------------------
+1. The window is kept in a fixed-length ``bytearray``.
+   We leverage the builtin ``bytearray.index`` method for efficient pattern search.
+2. Because of (1) a string pattern is broken up by the ring buffer wraparound point,
+   the pattern won't be detected. This results in potentially slightly lower
+   compression ratios for faster operation and smaller/simpler implementation.
 """
 from math import ceil
-
-WINDOW_BITS = 10
-SIZE_BITS = 4
-MIN_PATTERN_BYTES = ceil((WINDOW_BITS + SIZE_BITS) / 9 + 0.001)
-
-# w=13, s=4
-# 1 literal takes up 9 bits; 1 token takes up 18 bits
-# 2 literal takes up 18 bits; 1 token takes up 18 bits
-
-# w=11, s=4
-# 1 literal takes up 9 bits; 1 token takes up 16 bits
-# 2 literal takes up 18 bits; 1 token takes up 16 bits
-
-# w=10, s=4
-# 1 literal takes up 9 bits; 1 token takes up 15 bits
-# 2 literal takes up 18 bits; 1 token takes up 15 bits
-
-# w=8, s=4
-# 1 literal takes up 9 bits; 1 token takes up 12 bits
-# 2 literal takes up 18 bits; 1 token takes up 12 bits
-
-
-BUFFER_BYTES = 2**WINDOW_BITS
-MAX_PATTERN_SIZE = SIZE_BITS**2 + MIN_PATTERN_BYTES
 
 
 class BitWriter:
@@ -122,20 +97,37 @@ class RingBuffer:
             self.write_byte(byte)
 
 
+def _compute_min_pattern_bytes(window_bits, size_bits):
+    return ceil((window_bits + size_bits) / 9 + 0.001)
+
+
 class Compressor:
-    def __init__(self, f):
+    def __init__(self, f, window_bits=10, size_bits=4):
+        self.window_bits = window_bits
+        self.size_bits = size_bits
+
+        self.min_pattern_bytes = _compute_min_pattern_bytes(
+            self.window_bits, self.size_bits
+        )
+        # up to, not including max_pattern_bytes_exclusive
+        self.max_pattern_bytes_exclusive = (
+            1 << self.size_bits
+        ) + self.min_pattern_bytes
+
         self._bit_writer = BitWriter(f)
-        self._bit_writer.write(WINDOW_BITS - 8, 3)
-        self._bit_writer.write(SIZE_BITS - 4, 2)
+        self.ring_buffer = RingBuffer(2**self.window_bits)
+
+        # Write header
+        self._bit_writer.write(window_bits - 8, 3)
+        self._bit_writer.write(size_bits - 4, 2)
         self._bit_writer.write(0, 3)  # reserved
-        self.ring_buffer = RingBuffer(BUFFER_BYTES)
 
     def compress(self, data):
         data_start = 0
         while data_start < len(data):
             search_i = 0
             match_size = 1
-            for size in range(MIN_PATTERN_BYTES, MAX_PATTERN_SIZE):
+            for size in range(self.min_pattern_bytes, self.max_pattern_bytes_exclusive):
                 data_end = data_start + size
                 if data_end > len(data):
                     break
@@ -151,8 +143,10 @@ class Compressor:
 
             if match_size > 1:
                 self._bit_writer.write(0, 1)  # is token
-                self._bit_writer.write(search_i, WINDOW_BITS)
-                self._bit_writer.write(match_size - MIN_PATTERN_BYTES, SIZE_BITS)
+                self._bit_writer.write(search_i, self.window_bits)
+                self._bit_writer.write(
+                    match_size - self.min_pattern_bytes, self.size_bits
+                )
 
                 self.ring_buffer.write_bytes(string)
             else:
@@ -170,8 +164,17 @@ class Compressor:
 class Decompressor:
     def __init__(self, f):
         self._bit_reader = BitReader(f)
-        _ = self._bit_reader.read(8)  # TODO: parse header
-        self.ring_buffer = RingBuffer(BUFFER_BYTES)
+
+        # Read Header
+        self.window_bits = self._bit_reader.read(3) + 8
+        self.size_bits = self._bit_reader.read(2) + 4
+        _ = self._bit_reader.read(3)  # reserved
+
+        # Setup buffers
+        self.min_pattern_bytes = _compute_min_pattern_bytes(
+            self.window_bits, self.size_bits
+        )
+        self.ring_buffer = RingBuffer(2**self.window_bits)
         self.overflow = bytearray()
 
     def decompress(self, size=-1):
@@ -198,8 +201,10 @@ class Decompressor:
                     self.ring_buffer.write_byte(c)
                     out.append(c)
                 else:
-                    index = self._bit_reader.read(WINDOW_BITS)
-                    match_size = self._bit_reader.read(SIZE_BITS) + MIN_PATTERN_BYTES
+                    index = self._bit_reader.read(self.window_bits)
+                    match_size = (
+                        self._bit_reader.read(self.size_bits) + self.min_pattern_bytes
+                    )
 
                     string = self.ring_buffer.buffer[index : index + match_size]
                     self.ring_buffer.write_bytes(string)

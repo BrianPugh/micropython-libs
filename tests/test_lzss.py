@@ -34,12 +34,10 @@ class TestBitWriterAndReader(unittest.TestCase):
 
     def test_compressor(self):
         test_string = b"foo foo foo"
-        # WINDOW_BITS = 10
-        # SIZE_BITS = 4
-        # MIN_PATTERN_BYTES = 2
 
         expected = bytes(
             [
+                0b010_00_000,  # , header (window_bits=10, size_bits=4)
                 0b1_0110_011,  # f; 1 flag; carry 0
                 0b0_1_0110_11,  # o; 1 flag; carry 11
                 0b11_1_0110_1,  # o; 1 flag, carry 111
@@ -70,6 +68,7 @@ class TestBitWriterAndReader(unittest.TestCase):
 
         compressed = bytes(
             [
+                0b010_00_000,  # , header (window_bits=10, size_bits=4)
                 0b1_0110_011,  # f; 1 flag; carry 0
                 0b0_1_0110_11,  # o; 1 flag; carry 11
                 0b11_1_0110_1,  # o; 1 flag, carry 111
