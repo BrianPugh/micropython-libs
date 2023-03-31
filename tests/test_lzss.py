@@ -1,8 +1,10 @@
+"""
+"""
 import io
 import random
 import unittest
 
-from lzss import BitReader, BitWriter
+from lzss import BitReader, BitWriter, Compressor, Decompressor
 
 
 class TestBitWriterAndReader(unittest.TestCase):
@@ -29,6 +31,64 @@ class TestBitWriterAndReader(unittest.TestCase):
             for original_bits, num_bits in chunks:
                 read_bits = reader.read(num_bits)
                 self.assertEqual(read_bits, original_bits)
+
+    def test_compressor(self):
+        test_string = b"foo foo foo"
+        # WINDOW_BITS = 10
+        # SIZE_BITS = 4
+        # MIN_PATTERN_BYTES = 2
+
+        expected = bytes(
+            [
+                0b1_0110_011,  # f; 1 flag; carry 0
+                0b0_1_0110_11,  # o; 1 flag; carry 11
+                0b11_1_0110_1,  # o; 1 flag, carry 111
+                0b111_1_0010,  # space; 1 flag, carry 0000
+                # FIRST TOKEN, should be a repeat of "foo " at index 0
+                0b0000_0_000,
+                0b0000000_0,  # "foo " token <0, 4> -> <0, 2>; 0 flag, carry 010
+                # SECOND TOKEN, should be a repeat of "foo" at index 0
+                0b010_0_0000,
+                0b000000_00,  # "foo" token <0, 3> -> <0, 1>; carry 01
+                0b0100_0000,
+            ]
+        )
+        with io.BytesIO() as f:
+            compressor = Compressor(f)
+            compressor.compress(test_string)
+            compressor.flush()
+
+            f.seek(0)
+            actual = f.read()
+        self.assertEqual(expected, actual)
+
+    def test_decompressor(self):
+        expected = b"foo foo foo"
+        # WINDOW_BITS = 10
+        # SIZE_BITS = 4
+        # MIN_PATTERN_BYTES = 2
+
+        compressed = bytes(
+            [
+                0b1_0110_011,  # f; 1 flag; carry 0
+                0b0_1_0110_11,  # o; 1 flag; carry 11
+                0b11_1_0110_1,  # o; 1 flag, carry 111
+                0b111_1_0010,  # space; 1 flag, carry 0000
+                # FIRST TOKEN, should be a repeat of "foo " at index 0
+                0b0000_0_000,
+                0b0000000_0,  # "foo " token <0, 4> -> <0, 2>; 0 flag, carry 010
+                # SECOND TOKEN, should be a repeat of "foo" at index 0
+                0b010_0_0000,
+                0b000000_00,  # "foo" token <0, 3> -> <0, 1>; carry 01
+                0b0100_0000,
+            ]
+        )
+
+        with io.BytesIO(compressed) as f:
+            decompressor = Decompressor(f)
+            actual = decompressor.decompress()
+
+        self.assertEqual(expected, actual)
 
 
 if __name__ == "__main__":

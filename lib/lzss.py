@@ -14,10 +14,28 @@ Compromises:
       This results in slightly lower compression ratios for faster operation and
       smaller/simpler implementation.
 """
+from math import ceil
 
 WINDOW_BITS = 10
 SIZE_BITS = 4
-MIN_PATTERN_BYTES = 3
+MIN_PATTERN_BYTES = ceil((WINDOW_BITS + SIZE_BITS) / 9 + 0.001)
+
+# w=13, s=4
+# 1 literal takes up 9 bits; 1 token takes up 18 bits
+# 2 literal takes up 18 bits; 1 token takes up 18 bits
+
+# w=11, s=4
+# 1 literal takes up 9 bits; 1 token takes up 16 bits
+# 2 literal takes up 18 bits; 1 token takes up 16 bits
+
+# w=10, s=4
+# 1 literal takes up 9 bits; 1 token takes up 15 bits
+# 2 literal takes up 18 bits; 1 token takes up 15 bits
+
+# w=8, s=4
+# 1 literal takes up 9 bits; 1 token takes up 12 bits
+# 2 literal takes up 18 bits; 1 token takes up 12 bits
+
 
 BUFFER_BYTES = 2**WINDOW_BITS
 MAX_PATTERN_SIZE = SIZE_BITS**2 + MIN_PATTERN_BYTES
@@ -88,7 +106,7 @@ class RingBuffer:
 
     def write_byte(self, byte):
         self.buffer[self.pos] = byte
-        self.pos = (self.pos + 1) % self.size
+        self.pos = (self.pos + 1) % self.size  # Could use a mask
 
     def write_bytes(self, data):
         for byte in data:
@@ -120,14 +138,16 @@ class Compressor:
                 match_size = size
 
             if match_size > 1:
-                print(f"Compress {search_i=} {match_size=}")
+                self._bit_writer.write(0, 1)  # is token
                 self._bit_writer.write(search_i, WINDOW_BITS)
                 self._bit_writer.write(match_size - MIN_PATTERN_BYTES, SIZE_BITS)
+
                 self.ring_buffer.write_bytes(string)
             else:
-                self.ring_buffer.write_byte(data[data_start])
-                self._bit_writer.write(1, 1)
+                self._bit_writer.write(1, 1)  # is literal
                 self._bit_writer.write(data[data_start], 8)
+
+                self.ring_buffer.write_byte(data[data_start])
 
             data_start += match_size
 
@@ -169,7 +189,6 @@ class Decompressor:
                     match_size = self._bit_reader.read(SIZE_BITS) + MIN_PATTERN_BYTES
 
                     string = self.ring_buffer.buffer[index : index + match_size]
-                    print(f"decomp: {string=} {match_size=}")
                     self.ring_buffer.write_bytes(string)
 
                     if len(out) + len(string) > size:
@@ -183,7 +202,7 @@ class Decompressor:
         return out
 
 
-def main():
+def main1():
     import time
     from io import BytesIO
 
@@ -227,7 +246,6 @@ def main2():
     from io import BytesIO
 
     test_string = b"I am sam, sam I am" * 10
-    test_string = b"foo foo foo"
     # test_string = b"foo foo"
     with open("compressed.lzss", "wb") as compressed_f:
         compressor = Compressor(compressed_f)
@@ -241,4 +259,4 @@ def main2():
 
 
 if __name__ == "__main__":
-    main2()
+    main1()
