@@ -129,36 +129,39 @@ class Compressor:
         write = self._bit_writer.write
         ring_buffer = self.ring_buffer
         index = ring_buffer.buffer.index
+        min_pattern_bytes = self.min_pattern_bytes
+        max_pattern_bytes_exclusive = self.max_pattern_bytes_exclusive
 
         # Primary compression loop.
         while data_start < len(data):
             search_i = 0
-            match_size = 1
-            for size in range(self.min_pattern_bytes, self.max_pattern_bytes_exclusive):
-                data_end = data_start + size
+            for match_size in range(min_pattern_bytes, max_pattern_bytes_exclusive):
+                data_end = data_start + match_size
                 if data_end > len(data):
+                    match_size = match_size - 1
                     break
-                next_string = data[data_start:data_end]
+                string = data[data_start:data_end]
                 try:
-                    search_i = index(next_string, search_i)  # ~28% of time
+                    search_i = index(string, search_i)  # ~14% of time
                 except ValueError:
+                    match_size = match_size - 1
+                    string = string[:-1]
                     break  # Not Found
-                string = next_string
-                match_size = size
 
-            if match_size > 1:
+            if match_size >= min_pattern_bytes:
                 write(0, 1)  # is token
                 write(search_i, self.window_bits)
-                write(match_size - self.min_pattern_bytes, self.size_bits)
+                write(match_size - min_pattern_bytes, self.size_bits)
 
                 ring_buffer.write_bytes(string)
+
+                data_start += match_size
             else:
                 write(1, 1)  # is literal
                 write(data[data_start], 8)
 
                 ring_buffer.write_byte(data[data_start])
-
-            data_start += match_size
+                data_start += 1
 
     def flush(self):
         self._bit_writer.flush()
@@ -229,7 +232,7 @@ def main1():
 
     block_size = 1024 * 1024
     uncompressed_len = 0
-    expected_uncompressed_len = 100000000
+    test_file = "enwik8"
     test_file = "enwik8_1mb"
 
     t_start = time.time()
@@ -237,7 +240,6 @@ def main1():
         compressor = Compressor(compressed_f)
         with open(test_file, "rb") as f:
             while True:
-                # print(f"{100 * uncompressed_len / expected_uncompressed_len:.1f}%")
                 data = f.read(block_size)
                 if not data:
                     break
@@ -247,20 +249,25 @@ def main1():
         compressed_len = compressed_f.tell()
     print(f"compressed={compressed_len}")
     print(f"ratio: {uncompressed_len / compressed_len:.3f}")
-
-    with open("compressed.lzss", "rb") as compressed_f:
-        decompressor = Decompressor(compressed_f)
-        result = decompressor.decompress()
-
-    with open(test_file, "rb") as f:
-        test_string = f.read()
-    assert len(result) == len(test_string)
-    assert result == test_string
-    print(f"{len(test_string)=}")
-
     t_end = time.time()
     t_duration = t_end - t_start
     print(f"{t_duration=}")
+
+    if True:
+        t_start = time.time()
+        with open("compressed.lzss", "rb") as compressed_f:
+            decompressor = Decompressor(compressed_f)
+            result = decompressor.decompress()
+
+        with open(test_file, "rb") as f:
+            test_string = f.read()
+        assert len(result) == len(test_string)
+        assert result == test_string
+        print(f"{len(test_string)=}")
+
+        t_end = time.time()
+        t_duration = t_end - t_start
+        print(f"{t_duration=}")
 
 
 def main2():
