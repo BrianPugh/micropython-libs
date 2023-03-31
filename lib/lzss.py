@@ -19,45 +19,43 @@ WINDOW_BITS = 10
 SIZE_BITS = 4
 MIN_PATTERN_BYTES = 3
 
-BUFFER_BYTES = 2 ** WINDOW_BITS
-MAX_PATTERN_SIZE = SIZE_BITS ** 2 + MIN_PATTERN_BYTES
+BUFFER_BYTES = 2**WINDOW_BITS
+MAX_PATTERN_SIZE = SIZE_BITS**2 + MIN_PATTERN_BYTES
 
 
 class BitWriter:
     """Writes bits to a stream."""
+
     def __init__(self, f):
         self.f = f
         self.buffer = 0  # Basically a uint24
         self.bit_pos = 0
 
     def write(self, bits, num_bits):
-        assert self.buffer < (1 << 32)
         self.buffer |= bits << (32 - self.bit_pos - num_bits)
         self.bit_pos += num_bits
 
-        assert self.buffer < (1 << 32)
-
-        # Here we assume that there will never be more than 24 bits in buffer
         if self.bit_pos >= 16:
             byte = self.buffer >> 16
-            self.f.write(byte.to_bytes(2, 'little'))
+            self.f.write(byte.to_bytes(2, "big"))
             self.buffer = (self.buffer & 0xFFFF) << 16
             self.bit_pos -= 16
         elif self.bit_pos >= 8:
             byte = self.buffer >> 24
-            self.f.write(byte.to_bytes(1, 'little'))
+            self.f.write(byte.to_bytes(1, "big"))
             self.buffer = (self.buffer & 0xFFFFFF) << 8
             self.bit_pos -= 8
 
     def flush(self):
         if self.bit_pos > 0:
             byte = (self.buffer >> 24) & 0xFF
-            self.f.write(byte.to_bytes(1, 'little'))
+            self.f.write(byte.to_bytes(1, "big"))
             self.bit_pos = 0
 
 
 class BitReader:
     """Reads bits from a stream."""
+
     def __init__(self, f):
         self.f = f
         self.buffer = 0  # Basically a uint32
@@ -68,12 +66,13 @@ class BitReader:
             byte = self.f.read(1)
             if not byte:
                 raise EOFError
-            byte_value = int.from_bytes(byte, 'little')
+            byte_value = int.from_bytes(byte, "big")
             self.buffer |= byte_value << (24 - self.bit_pos)
             self.bit_pos += 8
 
         result = self.buffer >> (32 - num_bits)
-        self.buffer = (self.buffer & ((1 << (32 - num_bits)) - 1)) << num_bits
+        mask = (1 << (32 - num_bits)) - 1
+        self.buffer = (self.buffer & mask) << num_bits
         self.bit_pos -= num_bits
 
         return result
@@ -81,6 +80,7 @@ class BitReader:
 
 class RingBuffer:
     """Simple write-only ring buffer for storing window."""
+
     def __init__(self, size):
         self.buffer = bytearray(size)
         self.size = size
@@ -111,13 +111,16 @@ class Compressor:
                     break
                 next_string = data[data_start:data_end]
                 try:
-                    search_i = self.ring_buffer.buffer.index(next_string, search_i)  # ~28% of time
+                    search_i = self.ring_buffer.buffer.index(
+                        next_string, search_i
+                    )  # ~28% of time
                 except ValueError:
                     break  # Not Found
                 string = next_string
                 match_size = size
 
             if match_size > 1:
+                print(f"Compress {search_i=} {match_size=}")
                 self._bit_writer.write(search_i, WINDOW_BITS)
                 self._bit_writer.write(match_size - MIN_PATTERN_BYTES, SIZE_BITS)
                 self.ring_buffer.write_bytes(string)
@@ -165,7 +168,8 @@ class Decompressor:
                     index = self._bit_reader.read(WINDOW_BITS)
                     match_size = self._bit_reader.read(SIZE_BITS) + MIN_PATTERN_BYTES
 
-                    string = self.ring_buffer.buffer[index:index+match_size]
+                    string = self.ring_buffer.buffer[index : index + match_size]
+                    print(f"decomp: {string=} {match_size=}")
                     self.ring_buffer.write_bytes(string)
 
                     if len(out) + len(string) > size:
@@ -193,7 +197,7 @@ def main():
         compressor = Compressor(compressed_f)
         with open(test_file, "rb") as f:
             while True:
-                #print(f"{100 * uncompressed_len / expected_uncompressed_len:.1f}%")
+                # print(f"{100 * uncompressed_len / expected_uncompressed_len:.1f}%")
                 data = f.read(block_size)
                 if not data:
                     break
@@ -219,5 +223,22 @@ def main():
     print(f"{t_duration=}")
 
 
+def main2():
+    from io import BytesIO
+
+    test_string = b"I am sam, sam I am" * 10
+    test_string = b"foo foo foo"
+    # test_string = b"foo foo"
+    with open("compressed.lzss", "wb") as compressed_f:
+        compressor = Compressor(compressed_f)
+        compressor.compress(test_string)
+        compressor.flush()
+
+    with open("compressed.lzss", "rb") as compressed_f:
+        decompressor = Decompressor(compressed_f)
+        result = decompressor.decompress()
+    print(result)
+
+
 if __name__ == "__main__":
-    main()
+    main2()
