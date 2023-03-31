@@ -124,6 +124,13 @@ class Compressor:
 
     def compress(self, data):
         data_start = 0
+
+        # Caching object references for speed.
+        write = self._bit_writer.write
+        ring_buffer = self.ring_buffer
+        index = ring_buffer.buffer.index
+
+        # Primary compression loop.
         while data_start < len(data):
             search_i = 0
             match_size = 1
@@ -133,27 +140,23 @@ class Compressor:
                     break
                 next_string = data[data_start:data_end]
                 try:
-                    search_i = self.ring_buffer.buffer.index(
-                        next_string, search_i
-                    )  # ~28% of time
+                    search_i = index(next_string, search_i)  # ~28% of time
                 except ValueError:
                     break  # Not Found
                 string = next_string
                 match_size = size
 
             if match_size > 1:
-                self._bit_writer.write(0, 1)  # is token
-                self._bit_writer.write(search_i, self.window_bits)
-                self._bit_writer.write(
-                    match_size - self.min_pattern_bytes, self.size_bits
-                )
+                write(0, 1)  # is token
+                write(search_i, self.window_bits)
+                write(match_size - self.min_pattern_bytes, self.size_bits)
 
-                self.ring_buffer.write_bytes(string)
+                ring_buffer.write_bytes(string)
             else:
-                self._bit_writer.write(1, 1)  # is literal
-                self._bit_writer.write(data[data_start], 8)
+                write(1, 1)  # is literal
+                write(data[data_start], 8)
 
-                self.ring_buffer.write_byte(data[data_start])
+                ring_buffer.write_byte(data[data_start])
 
             data_start += match_size
 
