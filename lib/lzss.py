@@ -105,6 +105,7 @@ class Compressor:
     def __init__(self, f, window_bits=10, size_bits=4):
         self.window_bits = window_bits
         self.size_bits = size_bits
+        self.token_bits = window_bits + size_bits + 1
 
         self.min_pattern_bytes = _compute_min_pattern_bytes(
             self.window_bits, self.size_bits
@@ -131,6 +132,8 @@ class Compressor:
         index = ring_buffer.buffer.index
         min_pattern_bytes = self.min_pattern_bytes
         max_pattern_bytes_exclusive = self.max_pattern_bytes_exclusive
+        size_bits = self.size_bits
+        token_bits = self.token_bits
 
         # Primary compression loop.
         while data_start < len(data):
@@ -149,17 +152,14 @@ class Compressor:
                     break  # Not Found
 
             if match_size >= min_pattern_bytes:
-                write(0, 1)  # is token
-                write(search_i, self.window_bits)
-                write(match_size - min_pattern_bytes, self.size_bits)
-
+                write(
+                    (search_i << size_bits) | (match_size - min_pattern_bytes),
+                    token_bits,
+                )
                 ring_buffer.write_bytes(string)
-
                 data_start += match_size
             else:
-                write(1, 1)  # is literal
-                write(data[data_start], 8)
-
+                write(data[data_start] | 0x100, 9)
                 ring_buffer.write_byte(data[data_start])
                 data_start += 1
 
