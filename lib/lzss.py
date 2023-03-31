@@ -1,5 +1,14 @@
 """Modified LZSS encoding for efficient micropython.
 
+The header is a single byte where:
+* First 3 bits are (window_bits - 8).
+  e.g. A 12-bit window is encoded as the number 4, 0b100.
+  This means the smallest window is 256 bytes, and largest is 32768.
+* The next 2 bits are (size_bits - 4).
+  e.g. a 4-bit size (max value 19) is encoded as the number 0, 0b00
+* Remaining 3 bits are reserved (currently 0b000)
+
+
 Token encoding:
 
 * Each token is 16 bits (2 bytes)
@@ -116,6 +125,9 @@ class RingBuffer:
 class Compressor:
     def __init__(self, f):
         self._bit_writer = BitWriter(f)
+        self._bit_writer.write(WINDOW_BITS - 8, 3)
+        self._bit_writer.write(SIZE_BITS - 4, 2)
+        self._bit_writer.write(0, 3)  # reserved
         self.ring_buffer = RingBuffer(BUFFER_BYTES)
 
     def compress(self, data):
@@ -158,6 +170,7 @@ class Compressor:
 class Decompressor:
     def __init__(self, f):
         self._bit_reader = BitReader(f)
+        _ = self._bit_reader.read(8)  # TODO: parse header
         self.ring_buffer = RingBuffer(BUFFER_BYTES)
         self.overflow = bytearray()
 
