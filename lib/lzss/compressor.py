@@ -1,3 +1,4 @@
+from . import ExcessBitsError, compute_min_pattern_bytes
 from .common import RingBuffer
 
 
@@ -31,23 +32,16 @@ class BitWriter:
             self.bit_pos = 0
 
 
-def _compute_min_pattern_bytes(window_bits, size_bits):
-    return int((window_bits + size_bits) / 9 + 1.001)
-
-
 class Compressor:
     def __init__(self, f, window_bits=10, size_bits=4, literal_bits=8):
         self.window_bits = window_bits
         self.size_bits = size_bits
         self.literal_bits = literal_bits
 
-        if literal_bits != 8:
-            raise NotImplementedError
-
         self.token_bits = window_bits + size_bits + 1
 
-        self.min_pattern_bytes = _compute_min_pattern_bytes(
-            self.window_bits, self.size_bits
+        self.min_pattern_bytes = compute_min_pattern_bytes(
+            window_bits, size_bits, literal_bits
         )
         # up to, not including max_pattern_bytes_exclusive
         self.max_pattern_bytes_exclusive = (
@@ -65,6 +59,9 @@ class Compressor:
 
     def compress(self, data):
         data_start = 0
+
+        literal_flag = 1 << self.literal_bits
+        literal_mask_check = 0xFFFFFFFF - literal_flag + 1
 
         # Primary compression loop.
         while data_start < len(data):
@@ -93,7 +90,12 @@ class Compressor:
                 self.ring_buffer.write_bytes(string)
                 data_start += match_size
             else:
-                self._bit_writer.write(data[data_start] | 0x100, 9)
+                if data[data_start] & literal_mask_check:
+                    raise ExcessBitsError
+
+                self._bit_writer.write(
+                    data[data_start] | literal_flag, self.literal_bits + 1
+                )
                 self.ring_buffer.write_byte(data[data_start])
                 data_start += 1
 
