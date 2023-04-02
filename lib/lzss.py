@@ -22,7 +22,26 @@ Implementation Details
    the pattern won't be detected. This results in potentially slightly lower
    compression ratios for faster operation and smaller/simpler implementation.
 """
+import time
+
+try:
+    import micropython
+except ImportError:
+    micropython = None
 from math import ceil
+
+t = 0
+
+
+def timed_function(f, *args, **kwargs):
+    def new_func(*args, **kwargs):
+        global t
+        t_start = time.ticks_us()
+        result = f(*args, **kwargs)
+        t += time.ticks_diff(time.ticks_us(), t_start)
+        return result
+
+    return new_func
 
 
 class BitWriter:
@@ -34,8 +53,8 @@ class BitWriter:
         self.bit_pos = 0
 
     def write(self, bits, num_bits):
-        self.buffer |= bits << (32 - self.bit_pos - num_bits)
         self.bit_pos += num_bits
+        self.buffer |= bits << (32 - self.bit_pos)
 
         if self.bit_pos >= 16:
             byte = self.buffer >> 16
@@ -88,6 +107,28 @@ class RingBuffer:
         self.size = size
         self.pos = 0
 
+        if not hasattr(self, "index"):
+            self.index = self.buffer.index
+
+    if not hasattr(bytearray, "index"):
+
+        @micropython.viper
+        def index(self, sub, start: int) -> int:
+            buf_ptr = ptr8(self.buffer)
+            sub_ptr = ptr8(sub)
+
+            start = int(start)
+            buf_len = int(len(self.buffer))
+            sub_len = int(len(sub))
+
+            for i in range(start, buf_len - sub_len + 1):
+                for j in range(sub_len):
+                    if buf_ptr[i + j] != sub_ptr[j]:
+                        break
+                else:
+                    return i
+            raise ValueError
+
     def write_byte(self, byte):
         self.buffer[self.pos] = byte
         self.pos = (self.pos + 1) % self.size  # Could use a mask
@@ -126,41 +167,35 @@ class Compressor:
     def compress(self, data):
         data_start = 0
 
-        # Caching object references for speed.
-        write = self._bit_writer.write
-        ring_buffer = self.ring_buffer
-        index = ring_buffer.buffer.index
-        min_pattern_bytes = self.min_pattern_bytes
-        max_pattern_bytes_exclusive = self.max_pattern_bytes_exclusive
-        size_bits = self.size_bits
-        token_bits = self.token_bits
-
         # Primary compression loop.
         while data_start < len(data):
             search_i = 0
-            for match_size in range(min_pattern_bytes, max_pattern_bytes_exclusive):
+            for match_size in range(
+                self.min_pattern_bytes, self.max_pattern_bytes_exclusive
+            ):
                 data_end = data_start + match_size
                 if data_end > len(data):
                     match_size = match_size - 1
                     break
                 string = data[data_start:data_end]
                 try:
-                    search_i = index(string, search_i)  # ~14% of time
+                    search_i = self.ring_buffer.index(string, search_i)  # ~14% of time
                 except ValueError:
                     match_size = match_size - 1
                     string = string[:-1]
                     break  # Not Found
 
-            if match_size >= min_pattern_bytes:
-                write(
-                    (search_i << size_bits) | (match_size - min_pattern_bytes),
-                    token_bits,
+            if match_size >= self.min_pattern_bytes:
+                self._bit_writer.write(
+                    (search_i << self.size_bits)
+                    | (match_size - self.min_pattern_bytes),
+                    self.token_bits,
                 )
-                ring_buffer.write_bytes(string)
+                self.ring_buffer.write_bytes(string)
                 data_start += match_size
             else:
-                write(data[data_start] | 0x100, 9)
-                ring_buffer.write_byte(data[data_start])
+                self._bit_writer.write(data[data_start] | 0x100, 9)
+                self.ring_buffer.write_byte(data[data_start])
                 data_start += 1
 
     def flush(self):
@@ -227,33 +262,39 @@ class Decompressor:
 
 
 def main1():
-    import time
     from io import BytesIO
 
-    block_size = 1024 * 1024
+    block_size = 10 * 1024
     uncompressed_len = 0
     test_file = "enwik8"
     test_file = "enwik8_1mb"
 
-    t_start = time.time()
+    t_start = time.ticks_ms()
     with open("compressed.lzss", "wb") as compressed_f:
         compressor = Compressor(compressed_f)
         with open(test_file, "rb") as f:
+            i_block = 0
             while True:
+                print(f"{i_block=}")
                 data = f.read(block_size)
                 if not data:
                     break
                 uncompressed_len += len(data)
                 compressor.compress(data)
+
+                i_block += 1
+                if i_block >= 4:
+                    break
         compressor.flush()
         compressed_len = compressed_f.tell()
+    t_end = time.ticks_ms()
+
     print(f"compressed={compressed_len}")
     print(f"ratio: {uncompressed_len / compressed_len:.3f}")
-    t_end = time.time()
-    t_duration = t_end - t_start
-    print(f"{t_duration=}")
+    print(f"Compressing: {time.ticks_diff(t_end, t_start)}ms")
+    print(f"Decorated Time = {t/1000:.3f}ms")
 
-    if True:
+    if False:
         t_start = time.time()
         with open("compressed.lzss", "rb") as compressed_f:
             decompressor = Decompressor(compressed_f)
@@ -272,18 +313,28 @@ def main1():
 
 def main2():
     from io import BytesIO
+    from time import ticks_diff, ticks_ms
 
     test_string = b"I am sam, sam I am" * 10
-    # test_string = b"foo foo"
+    t_start = ticks_ms()
     with open("compressed.lzss", "wb") as compressed_f:
         compressor = Compressor(compressed_f)
         compressor.compress(test_string)
         compressor.flush()
+        compressed_len = compressed_f.tell()
+    t_end = ticks_ms()
+    print(f"Compressing: {ticks_diff(t_end, t_start)}ms")
+    ratio = len(test_string) / compressed_len
+    print(f"Ratio: {ratio}")
 
+    t_start = ticks_ms()
     with open("compressed.lzss", "rb") as compressed_f:
         decompressor = Decompressor(compressed_f)
         result = decompressor.decompress()
-    print(result)
+    t_end = ticks_ms()
+    print(f"Decompressing: {ticks_diff(t_end, t_start)}ms")
+
+    assert result == test_string
 
 
 if __name__ == "__main__":
