@@ -4,6 +4,7 @@ import micropython
 
 t_search = 0
 
+
 class BitWriter:
     """Writes bits to a stream."""
 
@@ -100,7 +101,7 @@ class Compressor:
                     # Execution shortcut; a pattern doesn't exist.
                     continue
 
-                for pattern_len in range(2, max_pattern_len):
+                for pattern_len in range(2, max_pattern_len + 1):
                     buffer_search_pos = buffer_search_start + pattern_len
                     data_search_pos = data_pos + pattern_len
 
@@ -108,6 +109,8 @@ class Compressor:
                         break
                     # Bounds check after; less likely to perform check.
                     if buffer_search_pos >= buffer_len:
+                        break
+                    if data_search_pos >= data_len:
                         break
 
                 if pattern_len > best_pattern_len:
@@ -117,6 +120,7 @@ class Compressor:
                         break
             t_search += int(time.ticks_diff(time.ticks_us(), t_search_start))
 
+            # Write out a literal or a token
             if best_pattern_len >= min_pattern_len:
                 self._bit_writer.write(
                     (best_buffer_pos << size_bits)
