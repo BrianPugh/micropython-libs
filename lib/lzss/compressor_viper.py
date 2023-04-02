@@ -1,5 +1,8 @@
+import time
+
 import micropython
 
+t_search = 0
 
 class BitWriter:
     """Writes bits to a stream."""
@@ -70,6 +73,7 @@ class Compressor:
 
     @micropython.viper
     def _compress(self, data_bytes) -> int:
+        t_search = int(0)
         data_len = int(len(data_bytes))
         data = ptr8(data_bytes)
 
@@ -86,14 +90,15 @@ class Compressor:
             # Find longest pattern match
             best_buffer_pos = int(0)
             best_pattern_len = int(0)
-            for buffer_search_start in range(buffer_len - min_pattern_len):
+            t_search_start = time.ticks_us()
+            for buffer_search_start in range(buffer_len - min_pattern_len + 1):
                 for pattern_len in range(max_pattern_len):
                     buffer_search_pos = buffer_search_start + pattern_len
                     data_search_pos = data_pos + pattern_len
 
                     # Check index bounds
-                    if buffer_search_pos >= buffer_len or data_search_pos >= data_len:
-                        break
+                    #if buffer_search_pos >= buffer_len or data_search_pos >= data_len:
+                    #    break
                     if buffer[buffer_search_pos] != data[data_search_pos]:
                         break
 
@@ -102,7 +107,10 @@ class Compressor:
                         best_pattern_len = pattern_len
                 else:
                     break
+            t_search += int(time.ticks_diff(time.ticks_us(), t_search_start))
             best_pattern_len += 1
+            if best_buffer_pos + best_pattern_len > buffer_len:
+                best_pattern_len = buffer_len - best_buffer_pos
 
             if best_pattern_len >= min_pattern_len:
                 self._bit_writer.write(
@@ -120,6 +128,7 @@ class Compressor:
                 buffer[buffer_pos] = data[data_pos]
                 buffer_pos = (buffer_pos + 1) % buffer_len
                 data_pos += 1
+        print(f"t_search: {t_search}us")
         return buffer_pos
 
     def flush(self):
