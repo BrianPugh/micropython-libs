@@ -1,12 +1,15 @@
 """Modified LZSS encoding for efficient micropython.
 
 The header is a single byte where:
-* First 3 bits represent (window_bits minus 8).
+* Bits [7,6,5] bits represent (window_bits minus 8).
   e.g. A 12-bit window is encoded as the number 4, 0b100.
   This means the smallest window is 256 bytes, and largest is 32768.
-* The next 2 bits represent (size_bits minus 4).
+* Bits [4,3] represent (size_bits minus 4).
   e.g. a 4-bit size (max value 19) is encoded as the number 0, 0b00
-* Remaining 3 bits are reserved (currently 0b000)
+* Bits [2, 1] represent (literal_length - 5)
+    * i.e. 0b11 means that the literal_length is 8bits
+* Bit [0] indicates if there is a following header byte (for future upgradability).
+  0 means the next byte is **not** a header byte.
 
 
 Token Encoding
@@ -143,9 +146,14 @@ def _compute_min_pattern_bytes(window_bits, size_bits):
 
 
 class Compressor:
-    def __init__(self, f, window_bits=10, size_bits=4):
+    def __init__(self, f, window_bits=10, size_bits=4, literal_bits=8):
         self.window_bits = window_bits
         self.size_bits = size_bits
+        self.literal_bits = literal_bits
+
+        if literal_bits != 8:
+            raise NotImplementedError
+
         self.token_bits = window_bits + size_bits + 1
 
         self.min_pattern_bytes = _compute_min_pattern_bytes(
@@ -162,7 +170,8 @@ class Compressor:
         # Write header
         self._bit_writer.write(window_bits - 8, 3)
         self._bit_writer.write(size_bits - 4, 2)
-        self._bit_writer.write(0, 3)  # reserved
+        self._bit_writer.write(literal_bits - 5, 2)
+        self._bit_writer.write(0, 1)  # No other header bytes
 
     def compress(self, data):
         data_start = 0
@@ -209,7 +218,13 @@ class Decompressor:
         # Read Header
         self.window_bits = self._bit_reader.read(3) + 8
         self.size_bits = self._bit_reader.read(2) + 4
-        _ = self._bit_reader.read(3)  # reserved
+        self.literal_bits = self._bit_reader.read(2) + 5
+
+        if self._bit_reader.read(1):
+            raise NotImplementedError
+
+        if self.literal_bits != 8:
+            raise NotImplementedError
 
         # Setup buffers
         self.min_pattern_bytes = _compute_min_pattern_bytes(
