@@ -1,5 +1,4 @@
 from . import ExcessBitsError, compute_min_pattern_bytes
-from .common import RingBuffer
 
 
 class BitWriter:
@@ -30,6 +29,22 @@ class BitWriter:
             byte = (self.buffer >> 24) & 0xFF
             self.f.write(byte.to_bytes(1, "big"))
             self.bit_pos = 0
+
+
+class RingBuffer:
+    def __init__(self, size):
+        self.buffer = bytearray(size)
+        self.size = size
+        self.pos = 0
+        self.index = self.buffer.index
+
+    def write_byte(self, byte):  # ~10% of time
+        self.buffer[self.pos] = byte
+        self.pos = (self.pos + 1) % self.size
+
+    def write_bytes(self, data):
+        for byte in data:
+            self.write_byte(byte)
 
 
 class Compressor:

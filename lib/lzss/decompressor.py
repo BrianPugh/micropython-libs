@@ -1,5 +1,4 @@
 from . import compute_min_pattern_bytes
-from .common import RingBuffer
 
 
 class BitReader:
@@ -25,6 +24,22 @@ class BitReader:
         self.bit_pos -= num_bits
 
         return result
+
+
+class RingBuffer:
+    def __init__(self, size):
+        self.buffer = bytearray(size)
+        self.size = size
+        self.pos = 0
+        self.index = self.buffer.index
+
+    def write_byte(self, byte):  # ~10% of time
+        self.buffer[self.pos] = byte
+        self.pos = (self.pos + 1) % self.size
+
+    def write_bytes(self, data):
+        for byte in data:
+            self.write_byte(byte)
 
 
 class Decompressor:
