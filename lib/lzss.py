@@ -132,13 +132,18 @@ class RingBuffer:
                     return i
             raise ValueError
 
-    def write_byte(self, byte):
+    def write_byte(self, byte):  # ~10% of time
         self.buffer[self.pos] = byte
-        self.pos = (self.pos + 1) % self.size  # Could use a mask
+        self.pos = (self.pos + 1) % self.size
 
     def write_bytes(self, data):
+        buffer = self.buffer
+        pos = self.pos
+        size = self.size
         for byte in data:
-            self.write_byte(byte)
+            buffer[pos] = byte
+            pos = (pos + 1) % size
+        self.pos = pos
 
 
 def _compute_min_pattern_bytes(window_bits, size_bits):
