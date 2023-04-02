@@ -104,20 +104,17 @@ class Compressor:
                     buffer_search_pos = buffer_search_start + pattern_len
                     data_search_pos = data_pos + pattern_len
 
-                    # Don't check bounds here, this loop is too tight.
                     if buffer[buffer_search_pos] != data[data_search_pos]:
                         break
-                else:
-                    best_buffer_pos = buffer_search_start
-                    best_pattern_len = max_pattern_len
-                    break
+                    # Bounds check after; less likely to perform check.
+                    if buffer_search_pos >= buffer_len:
+                        break
 
                 if pattern_len > best_pattern_len:
-                    if buffer_search_pos >= buffer_len:
-                        # Bounds check here; gets executed less often
-                        break
                     best_buffer_pos = buffer_search_start
                     best_pattern_len = pattern_len
+                    if pattern_len == max_pattern_len:
+                        break
             t_search += int(time.ticks_diff(time.ticks_us(), t_search_start))
 
             if best_pattern_len >= min_pattern_len:
