@@ -26,6 +26,15 @@ Implementation Details
    compression ratios for faster operation and smaller/simpler implementation.
 """
 
+
+class ExcessBitsError(Exception):
+    """Provided data has more bits than expected."""
+
+
+def compute_min_pattern_bytes(window_bits, size_bits, literal_bits):
+    return int((window_bits + size_bits) / (literal_bits + 1) + 1.001)
+
+
 try:
     from .compressor_viper import Compressor
 except ImportError:

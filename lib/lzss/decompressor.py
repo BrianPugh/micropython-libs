@@ -1,4 +1,5 @@
-from .common import RingBuffer, _compute_min_pattern_bytes
+from . import compute_min_pattern_bytes
+from .common import RingBuffer
 
 
 class BitReader:
@@ -38,12 +39,9 @@ class Decompressor:
         if self._bit_reader.read(1):
             raise NotImplementedError
 
-        if self.literal_bits != 8:
-            raise NotImplementedError
-
         # Setup buffers
-        self.min_pattern_bytes = _compute_min_pattern_bytes(
-            self.window_bits, self.size_bits
+        self.min_pattern_bytes = compute_min_pattern_bytes(
+            self.window_bits, self.size_bits, self.literal_bits
         )
         self.ring_buffer = RingBuffer(2**self.window_bits)
         self.overflow = bytearray()
@@ -68,7 +66,7 @@ class Decompressor:
                 is_literal = self._bit_reader.read(1)
 
                 if is_literal:
-                    c = self._bit_reader.read(8)
+                    c = self._bit_reader.read(self.literal_bits)
                     self.ring_buffer.write_byte(c)
                     out.append(c)
                 else:

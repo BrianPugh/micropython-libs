@@ -1,6 +1,10 @@
+"""Micropython optimized for performance over readability.
+"""
 import time
 
 import micropython
+
+from . import ExcessBitsError, compute_min_pattern_bytes
 
 t_search = 0
 
@@ -35,31 +39,22 @@ class BitWriter:
             self.bit_pos = 0
 
 
-def _compute_min_pattern_bytes(window_bits, size_bits):
-    return int((window_bits + size_bits) / 9 + 1.001)
-
-
 class Compressor:
     def __init__(self, f, window_bits=10, size_bits=4, literal_bits=8):
         self.window_bits = window_bits
         self.size_bits = size_bits
         self.literal_bits = literal_bits
 
-        if literal_bits != 8:
-            raise NotImplementedError
-
         self.token_bits = window_bits + size_bits + 1
 
-        self.min_pattern_len = _compute_min_pattern_bytes(
-            self.window_bits, self.size_bits
+        self.min_pattern_len = compute_min_pattern_bytes(
+            window_bits, size_bits, literal_bits
         )
-        self.max_pattern_len = (
-            1 << self.size_bits
-        ) + self.min_pattern_len - 1
+        self.max_pattern_len = (1 << self.size_bits) + self.min_pattern_len - 1
 
         self._bit_writer = BitWriter(f)
 
-        self.buffer = bytearray(2 ** self.window_bits)
+        self.buffer = bytearray(2**self.window_bits)
         self.buffer_pos = 0
 
         # Write header
@@ -85,6 +80,9 @@ class Compressor:
         min_pattern_len = int(self.min_pattern_len)
         max_pattern_len = int(self.max_pattern_len)
         size_bits = int(self.size_bits)
+        literal_bits = int(self.literal_bits)
+        literal_flag = 1 << literal_bits
+        literal_mask_check = int(0xFFFFFFFF) - literal_flag + 1
 
         data_pos = int(0)
         while data_pos < data_len:
@@ -97,7 +95,7 @@ class Compressor:
                     # Execution shortcut; first symbol usually doesn't match.
                     continue
 
-                if buffer[buffer_search_start+1] != data[data_pos+1]:
+                if buffer[buffer_search_start + 1] != data[data_pos + 1]:
                     # Execution shortcut; a pattern doesn't exist.
                     continue
 
@@ -133,7 +131,9 @@ class Compressor:
                     buffer_pos = (buffer_pos + 1) % buffer_len
                 data_pos += best_pattern_len
             else:
-                self._bit_writer.write(data[data_pos] | 0x100, 9)
+                if data[data_pos] & literal_mask_check:
+                    raise ExcessBitsError
+                self._bit_writer.write(data[data_pos] | literal_flag, literal_bits + 1)
                 buffer[buffer_pos] = data[data_pos]
                 buffer_pos = (buffer_pos + 1) % buffer_len
                 data_pos += 1
