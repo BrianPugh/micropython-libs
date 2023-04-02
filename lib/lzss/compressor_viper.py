@@ -96,21 +96,20 @@ class Compressor:
                     buffer_search_pos = buffer_search_start + pattern_len
                     data_search_pos = data_pos + pattern_len
 
-                    # Check index bounds
-                    #if buffer_search_pos >= buffer_len or data_search_pos >= data_len:
-                    #    break
+                    # Don't check bounds here, this loop is too tight.
                     if buffer[buffer_search_pos] != data[data_search_pos]:
                         break
 
                     if pattern_len > best_pattern_len:
+                        if buffer_search_pos > buffer_len:
+                            # Bounds check here executes less often
+                            break
                         best_buffer_pos = buffer_search_start
                         best_pattern_len = pattern_len
                 else:
                     break
-            t_search += int(time.ticks_diff(time.ticks_us(), t_search_start))
             best_pattern_len += 1
-            if best_buffer_pos + best_pattern_len > buffer_len:
-                best_pattern_len = buffer_len - best_buffer_pos
+            t_search += int(time.ticks_diff(time.ticks_us(), t_search_start))
 
             if best_pattern_len >= min_pattern_len:
                 self._bit_writer.write(
