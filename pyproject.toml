@@ -98,3 +98,6 @@ reportMissingModuleSource = "none"  # for micropython stubs
 [tool.pytest.ini_options]
 pythonpath = "lib"
 addopts = "--cov-report=term-missing --cov=lib"
+
+[tool.belay.dependencies]
+lzss = {uri="lib/lzss", develop=true}
