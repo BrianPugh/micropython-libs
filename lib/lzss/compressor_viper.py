@@ -92,23 +92,32 @@ class Compressor:
             best_pattern_len = int(0)
             t_search_start = time.ticks_us()
             for buffer_search_start in range(buffer_len - min_pattern_len + 1):
-                for pattern_len in range(max_pattern_len):
+                if buffer[buffer_search_start] != data[data_pos]:
+                    # Execution shortcut; first symbol usually doesn't match.
+                    continue
+
+                if buffer[buffer_search_start+1] != data[data_pos+1]:
+                    # Execution shortcut; a pattern doesn't exist.
+                    continue
+
+                for pattern_len in range(2, max_pattern_len):
                     buffer_search_pos = buffer_search_start + pattern_len
                     data_search_pos = data_pos + pattern_len
 
                     # Don't check bounds here, this loop is too tight.
                     if buffer[buffer_search_pos] != data[data_search_pos]:
                         break
-
-                    if pattern_len > best_pattern_len:
-                        if buffer_search_pos > buffer_len:
-                            # Bounds check here executes less often
-                            break
-                        best_buffer_pos = buffer_search_start
-                        best_pattern_len = pattern_len
                 else:
+                    best_buffer_pos = buffer_search_start
+                    best_pattern_len = max_pattern_len
                     break
-            best_pattern_len += 1
+
+                if pattern_len > best_pattern_len:
+                    if buffer_search_pos >= buffer_len:
+                        # Bounds check here; gets executed less often
+                        break
+                    best_buffer_pos = buffer_search_start
+                    best_pattern_len = pattern_len
             t_search += int(time.ticks_diff(time.ticks_us(), t_search_start))
 
             if best_pattern_len >= min_pattern_len:
