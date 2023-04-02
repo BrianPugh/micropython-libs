@@ -101,6 +101,37 @@ If the led/switch are mounted elsewhere, this can also reduce the number of wire
    pin.value(False)
    pin.off()
 
+
+Signal
+^^^^^^
+
+The ``Signal`` class takes in a Pin-like object as input.
+Optionally, set the ``invert=True`` flag to invert physical
+input/output values.
+
+The builtin ``machine.Signal`` class doesn't handle pin-like objects well.
+However, this implementation won't be as fast/resource-efficient,
+but that's fine for many cases.
+
+If wrapping a vanilla ``machine.Pin`` object, it's recommended to use the
+built in ``machine.Signal`` class. If wrapping an object that implements the pin Protocol, then use the ``Signal`` class implemented here.
+
+
+.. code-block:: python
+
+   from debouncedpin import DebouncedPin
+   from signal import Signal
+
+   pin = DebouncedPin(7)  # This won't work with ``machine.Signal``
+   signal = Signal(pin, invert=True)  # If the output is active-low
+
+   signal.on()  # Turn signal off, setting pin high
+   signal.off()  # Turn signal off, setting pin low
+   signal.value(True)  # alternative ways to turn signal on
+   signal(True)
+
+   val = signal()  # Read input; this also abides by ``invert``.
+   val = signal.value()
 How It Works
 ~~~~~~~~~~~~
 In addition to the explanation of how ``DebouncedPin`` works, ``DebouncedLedPin`` will set the pin to be in an output configuration between pin input reads.
