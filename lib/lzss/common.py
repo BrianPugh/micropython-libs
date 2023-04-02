@@ -1,3 +1,7 @@
+def _compute_min_pattern_bytes(window_bits, size_bits):
+    return int((window_bits + size_bits) / 9 + 1.001)
+
+
 class RingBuffer:
     """Simple write-only ring buffer for storing window."""
 

@@ -4,7 +4,9 @@ import io
 import random
 import unittest
 
-from lzss import BitReader, BitWriter, Compressor, Decompressor
+from lzss import Compressor, Decompressor
+from lzss.compressor import BitWriter
+from lzss.decompressor import BitReader
 
 
 class TestBitWriterAndReader(unittest.TestCase):
@@ -37,7 +39,7 @@ class TestBitWriterAndReader(unittest.TestCase):
 
         expected = bytes(
             [
-                0b010_00_000,  # , header (window_bits=10, size_bits=4)
+                0b010_00_110,  # , header (window_bits=10, size_bits=4, literal_bits=8)
                 0b1_0110_011,  # f; 1 flag; carry 0
                 0b0_1_0110_11,  # o; 1 flag; carry 11
                 0b11_1_0110_1,  # o; 1 flag, carry 111
@@ -58,7 +60,7 @@ class TestBitWriterAndReader(unittest.TestCase):
 
             f.seek(0)
             actual = f.read()
-        self.assertEqual(expected, actual)
+        self.assertEqual(actual, expected)
 
     def test_decompressor(self):
         expected = b"foo foo foo"
@@ -68,7 +70,7 @@ class TestBitWriterAndReader(unittest.TestCase):
 
         compressed = bytes(
             [
-                0b010_00_000,  # , header (window_bits=10, size_bits=4)
+                0b010_00_110,  # , header (window_bits=10, size_bits=4, literal_bits=8)
                 0b1_0110_011,  # f; 1 flag; carry 0
                 0b0_1_0110_11,  # o; 1 flag; carry 11
                 0b11_1_0110_1,  # o; 1 flag, carry 111
@@ -87,7 +89,7 @@ class TestBitWriterAndReader(unittest.TestCase):
             decompressor = Decompressor(f)
             actual = decompressor.decompress()
 
-        self.assertEqual(expected, actual)
+        self.assertEqual(actual, expected)
 
 
 if __name__ == "__main__":

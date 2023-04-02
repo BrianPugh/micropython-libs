@@ -1,7 +1,5 @@
 import micropython
 
-from .common import RingBuffer
-
 
 class BitWriter:
     """Writes bits to a stream."""
@@ -48,16 +46,17 @@ class Compressor:
 
         self.token_bits = window_bits + size_bits + 1
 
-        self.min_pattern_bytes = _compute_min_pattern_bytes(
+        self.min_pattern_len = _compute_min_pattern_bytes(
             self.window_bits, self.size_bits
         )
-        # up to, not including max_pattern_bytes_exclusive
-        self.max_pattern_bytes_exclusive = (
+        self.max_pattern_len = (
             1 << self.size_bits
-        ) + self.min_pattern_bytes
+        ) + self.min_pattern_len - 1
 
         self._bit_writer = BitWriter(f)
-        self.ring_buffer = RingBuffer(2**self.window_bits)
+
+        self.buffer = bytearray(2 ** self.window_bits)
+        self.buffer_pos = 0
 
         # Write header
         self._bit_writer.write(window_bits - 8, 3)
@@ -65,39 +64,63 @@ class Compressor:
         self._bit_writer.write(literal_bits - 5, 2)
         self._bit_writer.write(0, 1)  # No other header bytes
 
-    def compress(self, data):
-        data_start = 0
+    @micropython.viper
+    def compress(self, data_bytes):
+        self.buffer_pos = self._compress(data_bytes)
 
-        # Primary compression loop.
-        while data_start < len(data):
-            search_i = 0
-            for match_size in range(
-                self.min_pattern_bytes, self.max_pattern_bytes_exclusive
-            ):
-                data_end = data_start + match_size
-                if data_end > len(data):
-                    match_size = match_size - 1
+    @micropython.viper
+    def _compress(self, data_bytes) -> int:
+        data_len = int(len(data_bytes))
+        data = ptr8(data_bytes)
+
+        buffer = ptr8(self.buffer)
+        buffer_len = int(len(self.buffer))
+        buffer_pos = int(self.buffer_pos)
+
+        min_pattern_len = int(self.min_pattern_len)
+        max_pattern_len = int(self.max_pattern_len)
+        size_bits = int(self.size_bits)
+
+        data_pos = int(0)
+        while data_pos < data_len:
+            # Find longest pattern match
+            best_buffer_pos = int(0)
+            best_pattern_len = int(0)
+            for buffer_search_start in range(buffer_len - min_pattern_len):
+                for pattern_len in range(max_pattern_len):
+                    buffer_search_pos = buffer_search_start + pattern_len
+                    data_search_pos = data_pos + pattern_len
+
+                    # Check index bounds
+                    if buffer_search_pos >= buffer_len or data_search_pos >= data_len:
+                        break
+                    if buffer[buffer_search_pos] != data[data_search_pos]:
+                        break
+
+                    if pattern_len > best_pattern_len:
+                        best_buffer_pos = buffer_search_start
+                        best_pattern_len = pattern_len
+                else:
                     break
-                string = data[data_start:data_end]
-                try:
-                    search_i = self.ring_buffer.index(string, search_i)  # ~14% of time
-                except ValueError:
-                    match_size = match_size - 1
-                    string = string[:-1]
-                    break  # Not Found
+            best_pattern_len += 1
 
-            if match_size >= self.min_pattern_bytes:
+            if best_pattern_len >= min_pattern_len:
                 self._bit_writer.write(
-                    (search_i << self.size_bits)
-                    | (match_size - self.min_pattern_bytes),
+                    (best_buffer_pos << size_bits)
+                    | (best_pattern_len - min_pattern_len),
                     self.token_bits,
                 )
-                self.ring_buffer.write_bytes(string)
-                data_start += match_size
+                # Copy pattern into buffer
+                for j in range(best_pattern_len):
+                    buffer[buffer_pos] = data[data_pos + j]
+                    buffer_pos = (buffer_pos + 1) % buffer_len
+                data_pos += best_pattern_len
             else:
-                self._bit_writer.write(data[data_start] | 0x100, 9)
-                self.ring_buffer.write_byte(data[data_start])
-                data_start += 1
+                self._bit_writer.write(data[data_pos] | 0x100, 9)
+                buffer[buffer_pos] = data[data_pos]
+                buffer_pos = (buffer_pos + 1) % buffer_len
+                data_pos += 1
+        return buffer_pos
 
     def flush(self):
         self._bit_writer.flush()

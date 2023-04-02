@@ -1,4 +1,4 @@
-from .common import RingBuffer
+from .common import RingBuffer, _compute_min_pattern_bytes
 
 
 class BitReader:
