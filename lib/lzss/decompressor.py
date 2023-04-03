@@ -62,7 +62,7 @@ class Decompressor:
         self.overflow = bytearray()
 
     def decompress(self, size=-1):
-        """Returns at most ``size`` bytes."""
+        """Return at most ``size`` bytes."""
         if size < 0:
             size = 0xFFFFFFFF
 
