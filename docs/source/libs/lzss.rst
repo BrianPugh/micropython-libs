@@ -26,11 +26,11 @@ Compresses data to an output stream.
 
 Primary configuration values:
 
-* ``window_bits`` - Defaults to 10 (1KB window).
+* ``window`` - Number of window bits. Defaults to 10 (1KB window).
 
-* ``size_bits`` - Maximum pattern length. Defaults to 4 (which equates to ~18 bytes).
+* ``size`` - Maximum pattern length. Defaults to 4 (which equates to ~18 bytes).
 
-* ``literal_bits`` - Number of actual bits in each input byte. Defaults to 8.
+* ``literal`` - Number of actual bits in each input byte. Defaults to 8.
 
 .. code-block:: python
 

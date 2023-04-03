@@ -95,7 +95,28 @@ class TestDecompressor(unittest.TestCase):
 
 
 class TestCompressorAndDecompressor(unittest.TestCase):
-    pass
+    def _autotest(self, num_bytes, n_bits, compressor_kwargs=None):
+        if compressor_kwargs is None:
+            compressor_kwargs = {}
+
+        data = bytearray(random.randint(0, (1 << n_bits) - 1) for x in range(num_bytes))
+
+        with io.BytesIO() as f:
+            c = Compressor(f, **compressor_kwargs)
+            c.compress(data)
+            c.flush()
+
+            f.seek(0)
+            d = Decompressor(f)
+            actual = d.decompress()
+
+        self.assertEqual(actual, data)
+
+    def test_default(self):
+        self._autotest(10_000, 8)
+
+    # def test_7bit(self):
+    #    self._autotest(10_000, 7, compressor_kwargs={"literal": 7})
 
 
 if __name__ == "__main__":
