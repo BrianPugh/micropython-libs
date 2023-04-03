@@ -1,12 +1,8 @@
 """Micropython optimized for performance over readability.
 """
-import time
-
 import micropython
 
 from . import ExcessBitsError, compute_min_pattern_bytes
-
-t_search = 0
 
 
 class BitWriter:
@@ -69,7 +65,6 @@ class Compressor:
 
     @micropython.viper
     def _compress(self, data_bytes) -> int:
-        t_search = int(0)
         data_len = int(len(data_bytes))
         data = ptr8(data_bytes)
 
@@ -89,7 +84,6 @@ class Compressor:
             # Find longest pattern match
             best_buffer_pos = int(0)
             best_pattern_len = int(0)
-            t_search_start = time.ticks_us()
             for buffer_search_start in range(buffer_len - min_pattern_len + 1):
                 if buffer[buffer_search_start] != data[data_pos]:
                     # Execution shortcut; first symbol usually doesn't match.
@@ -116,7 +110,6 @@ class Compressor:
                     best_pattern_len = pattern_len
                     if pattern_len == max_pattern_len:
                         break
-            t_search += int(time.ticks_diff(time.ticks_us(), t_search_start))
 
             # Write out a literal or a token
             if best_pattern_len >= min_pattern_len:
@@ -137,7 +130,6 @@ class Compressor:
                 buffer[buffer_pos] = data[data_pos]
                 buffer_pos = (buffer_pos + 1) % buffer_len
                 data_pos += 1
-        print(f"t_search: {t_search}us")
         return buffer_pos
 
     def flush(self):

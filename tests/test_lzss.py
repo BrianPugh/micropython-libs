@@ -32,6 +32,8 @@ class TestBitWriterAndReader(unittest.TestCase):
                 read_bits = reader.read(num_bits)
                 self.assertEqual(read_bits, original_bits)
 
+
+class TestCompressor(unittest.TestCase):
     def test_compressor(self):
         test_string = b"foo foo foo"
 
@@ -60,6 +62,8 @@ class TestBitWriterAndReader(unittest.TestCase):
             actual = f.read()
         self.assertEqual(actual, expected)
 
+
+class TestDecompressor(unittest.TestCase):
     def test_decompressor(self):
         expected = b"foo foo foo"
         # WINDOW_BITS = 10
@@ -88,6 +92,10 @@ class TestBitWriterAndReader(unittest.TestCase):
             actual = decompressor.decompress()
 
         self.assertEqual(actual, expected)
+
+
+class TestCompressorAndDecompressor(unittest.TestCase):
+    pass
 
 
 if __name__ == "__main__":
