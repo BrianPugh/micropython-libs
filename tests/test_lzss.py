@@ -144,9 +144,9 @@ class TestDecompressor(unittest.TestCase):
 
         with io.BytesIO(compressed) as f:
             decompressor = Decompressor(f)
-            self.assertEqual(decompressor.decompress(4), "foo ")
-            self.assertEqual(decompressor.decompress(2), "fo")
-            self.assertEqual(decompressor.decompress(-1), "o foo")
+            self.assertEqual(decompressor.decompress(4), b"foo ")
+            self.assertEqual(decompressor.decompress(2), b"fo")
+            self.assertEqual(decompressor.decompress(-1), b"o foo")
 
 
 class TestCompressorAndDecompressor(unittest.TestCase):
