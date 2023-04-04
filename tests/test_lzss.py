@@ -34,7 +34,7 @@ class TestBitWriterAndReader(unittest.TestCase):
 
 
 class TestCompressor(unittest.TestCase):
-    def test_compressor(self):
+    def test_compressor_default(self):
         test_string = b"foo foo foo"
 
         expected = bytes(
@@ -55,6 +55,33 @@ class TestCompressor(unittest.TestCase):
         )
         with io.BytesIO() as f:
             compressor = Compressor(f)
+            compressor.compress(test_string)
+            compressor.flush()
+
+            f.seek(0)
+            actual = f.read()
+        self.assertEqual(actual, expected)
+
+    def test_compressor_7bit(self):
+        test_string = b"foo foo foo"
+
+        expected = bytes(
+            [
+                0b010_00_100,  # , header (window_bits=10, size_bits=4, literal_bits=7)
+                0b1_110_0110,  # f; 1 flag
+                0b1_110_1111,  # o; 1 flag
+                0b1_110_1111,  # o; 1 flag
+                0b1_010_0000,  # space; 1 flag
+                # FIRST TOKEN, should be a repeat of "foo " at index 0
+                0b0_0000000,  # "foo " token <0, 4> -> <0, 2>; 0 flag
+                0b000_0010_0,  # reverse-carry flag from next token
+                # SECOND TOKEN, should be a repeat of "foo" at index 0
+                0b00000000,  # "foo" token <0, 3> -> <0, 1>
+                0b00_0001_00,  # 2bit padding.
+            ]
+        )
+        with io.BytesIO() as f:
+            compressor = Compressor(f, literal=7)
             compressor.compress(test_string)
             compressor.flush()
 
@@ -115,8 +142,8 @@ class TestCompressorAndDecompressor(unittest.TestCase):
     def test_default(self):
         self._autotest(10_000, 8)
 
-    # def test_7bit(self):
-    #    self._autotest(10_000, 7, compressor_kwargs={"literal": 7})
+    def test_7bit(self):
+        self._autotest(10_000, 7, compressor_kwargs={"literal": 7})
 
 
 if __name__ == "__main__":
