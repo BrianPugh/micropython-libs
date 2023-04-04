@@ -145,6 +145,12 @@ class TestCompressorAndDecompressor(unittest.TestCase):
     def test_7bit(self):
         self._autotest(10_000, 7, compressor_kwargs={"literal": 7})
 
+    def test_6bit(self):
+        self._autotest(10_000, 6, compressor_kwargs={"literal": 6})
+
+    def test_5bit(self):
+        self._autotest(10_000, 5, compressor_kwargs={"literal": 5})
+
 
 if __name__ == "__main__":
     unittest.main()
