@@ -120,6 +120,34 @@ class TestDecompressor(unittest.TestCase):
 
         self.assertEqual(actual, expected)
 
+    def test_decompressor_restricted_size(self):
+        # WINDOW_BITS = 10
+        # SIZE_BITS = 4
+        # MIN_PATTERN_BYTES = 2
+
+        compressed = bytes(
+            [
+                0b010_00_110,  # , header (window_bits=10, size_bits=4, literal_bits=8)
+                0b1_0110_011,  # f; 1 flag; carry 0
+                0b0_1_0110_11,  # o; 1 flag; carry 11
+                0b11_1_0110_1,  # o; 1 flag, carry 111
+                0b111_1_0010,  # space; 1 flag, carry 0000
+                # FIRST TOKEN, should be a repeat of "foo " at index 0
+                0b0000_0_000,
+                0b0000000_0,  # "foo " token <0, 4> -> <0, 2>; 0 flag, carry 010
+                # SECOND TOKEN, should be a repeat of "foo" at index 0
+                0b010_0_0000,
+                0b000000_00,  # "foo" token <0, 3> -> <0, 1>; carry 01
+                0b0100_0000,
+            ]
+        )
+
+        with io.BytesIO(compressed) as f:
+            decompressor = Decompressor(f)
+            self.assertEqual(decompressor.decompress(4), "foo ")
+            self.assertEqual(decompressor.decompress(2), "fo")
+            self.assertEqual(decompressor.decompress(-1), "o foo")
+
 
 class TestCompressorAndDecompressor(unittest.TestCase):
     def _autotest(self, num_bytes, n_bits, compressor_kwargs=None):
