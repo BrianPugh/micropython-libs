@@ -48,16 +48,14 @@ class RingBuffer:
 
 
 class Compressor:
-    def __init__(self, f, window_bits=10, size_bits=4, literal_bits=8):
-        self.window_bits = window_bits
-        self.size_bits = size_bits
-        self.literal_bits = literal_bits
+    def __init__(self, f, window=10, size=4, literal=8):
+        self.window_bits = window
+        self.size_bits = size
+        self.literal_bits = literal
 
-        self.token_bits = window_bits + size_bits + 1
+        self.token_bits = window + size + 1
 
-        self.min_pattern_bytes = compute_min_pattern_bytes(
-            window_bits, size_bits, literal_bits
-        )
+        self.min_pattern_bytes = compute_min_pattern_bytes(window, size, literal)
         # up to, not including max_pattern_bytes_exclusive
         self.max_pattern_bytes_exclusive = (
             1 << self.size_bits
@@ -67,9 +65,9 @@ class Compressor:
         self.ring_buffer = RingBuffer(2**self.window_bits)
 
         # Write header
-        self._bit_writer.write(window_bits - 8, 3)
-        self._bit_writer.write(size_bits - 4, 2)
-        self._bit_writer.write(literal_bits - 5, 2)
+        self._bit_writer.write(window - 8, 3)
+        self._bit_writer.write(size - 4, 2)
+        self._bit_writer.write(literal - 5, 2)
         self._bit_writer.write(0, 1)  # No other header bytes
 
     def compress(self, data):
