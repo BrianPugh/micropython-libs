@@ -167,6 +167,18 @@ class TestCompressorAndDecompressor(unittest.TestCase):
 
         self.assertEqual(actual, data)
 
+        data = bytearray(1 for _ in range(num_bytes))
+        with io.BytesIO() as f:
+            c = Compressor(f, **compressor_kwargs)
+            c.compress(data)
+            c.flush()
+
+            f.seek(0)
+            d = Decompressor(f)
+            actual = d.decompress()
+
+        self.assertEqual(actual, data)
+
     def test_default(self):
         self._autotest(10_000, 8)
 
