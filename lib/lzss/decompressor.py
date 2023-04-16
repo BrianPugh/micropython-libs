@@ -94,6 +94,8 @@ class Decompressor:
                     self.ring_buffer.write_bytes(string)
 
                     if len(out) + len(string) > size:
+                        # TODO: this is kind of wrong.
+                        # Should chop up string to match size.
                         self.overflow = string
                         break
                     else:

@@ -11,6 +11,7 @@ class BitWriter:
 
     def write(self, bits, num_bits):
         self.bit_pos += num_bits
+        bits &= (1 << num_bits) - 1
         self.buffer |= bits << (32 - self.bit_pos)
 
         if self.bit_pos >= 16:
