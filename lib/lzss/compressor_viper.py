@@ -33,6 +33,8 @@ class BitWriter:
             byte = (self.buffer >> 24) & 0xFF
             self.f.write(byte.to_bytes(1, "big"))
             self.bit_pos = 0
+            self.buffer = 0
+        self.f = None  # Prevent future writes
 
 
 class Compressor:
@@ -64,6 +66,7 @@ class Compressor:
     @micropython.viper
     def _compress(self, data_bytes) -> int:
         data_len = int(len(data_bytes))
+        data_len_minus_1 = data_len - 1
         data = ptr8(data_bytes)
 
         buffer = ptr8(self.buffer)
@@ -78,7 +81,11 @@ class Compressor:
         literal_mask_check = int(0xFFFFFFFF) - literal_flag + 1
 
         data_pos = int(0)
-        while data_pos < data_len:
+        # We perform 2 execution shortcuts (manually checking first 2 bytes for match).
+        # This could result in an out-of-bounds pattern match.
+        # We compensate here with ``data_len_minus_1`` so we don't need to perform
+        # additional (rare) boundary checks inside a super tight loop.
+        while data_pos < data_len_minus_1:
             # Find longest pattern match
             best_buffer_pos = int(0)
             best_pattern_len = int(0)
@@ -128,6 +135,15 @@ class Compressor:
                 buffer[buffer_pos] = data[data_pos]
                 buffer_pos = (buffer_pos + 1) % buffer_len
                 data_pos += 1
+
+        if data_pos == data_len_minus_1:
+            if data[data_pos] & literal_mask_check:
+                raise ExcessBitsError
+            self._bit_writer.write(data[data_pos] | literal_flag, literal_bits + 1)
+            buffer[buffer_pos] = data[data_pos]
+            buffer_pos = (buffer_pos + 1) % buffer_len
+            data_pos += 1
+
         return buffer_pos
 
     def flush(self):

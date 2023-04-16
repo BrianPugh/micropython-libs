@@ -32,6 +32,22 @@ class TestBitWriterAndReader(unittest.TestCase):
                 read_bits = reader.read(num_bits)
                 self.assertEqual(read_bits, original_bits)
 
+    def test_writer_correct_length(self):
+        for i in range(1, 8 + 1):
+            with io.BytesIO() as f:
+                writer = BitWriter(f)
+                writer.write(0xFFFF, i)
+                writer.flush()
+
+                self.assertEqual(f.tell(), 1)
+        for i in range(9, 16 + 1):
+            with io.BytesIO() as f:
+                writer = BitWriter(f)
+                writer.write(0xFFFF, i)
+                writer.flush()
+
+                self.assertEqual(f.tell(), 2)
+
 
 class TestCompressor(unittest.TestCase):
     def test_compressor_default(self):
@@ -88,6 +104,23 @@ class TestCompressor(unittest.TestCase):
             f.seek(0)
             actual = f.read()
         self.assertEqual(actual, expected)
+
+    def test_oob_2_byte_pattern(self):
+        """Viper implementation had a bug where a pattern of length 2
+        could be detected at the end of a string (going out of bounds
+        by 1 byte).
+        """
+        test_string_extended = bytearray(b"Q\x00Q\x00")
+        test_string = memoryview(test_string_extended)[:3]
+
+        with io.BytesIO() as f:
+            compressor = Compressor(f)
+            compressor.compress(test_string)
+            compressor.flush()
+
+            f.seek(0)
+            actual = f.read()
+        assert actual == b"F\xa8\xc0* "
 
 
 class TestDecompressor(unittest.TestCase):
@@ -177,6 +210,7 @@ class TestCompressorAndDecompressor(unittest.TestCase):
             d = Decompressor(f)
             actual = d.decompress()
 
+        self.assertEqual(len(actual), len(data))
         self.assertEqual(actual, data)
 
     def test_default(self):

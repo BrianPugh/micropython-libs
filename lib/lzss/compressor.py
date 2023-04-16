@@ -30,6 +30,8 @@ class BitWriter:
             byte = (self.buffer >> 24) & 0xFF
             self.f.write(byte.to_bytes(1, "big"))
             self.bit_pos = 0
+            self.buffer = 0
+        self.f = None  # Prevent future writes
 
 
 class RingBuffer:
