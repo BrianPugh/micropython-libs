@@ -132,6 +132,7 @@ built in ``machine.Signal`` class. If wrapping an object that implements the pin
 
    val = signal()  # Read input; this also abides by ``invert``.
    val = signal.value()
+
 How It Works
 ~~~~~~~~~~~~
 In addition to the explanation of how ``DebouncedPin`` works, ``DebouncedLedPin`` will set the pin to be in an output configuration between pin input reads.

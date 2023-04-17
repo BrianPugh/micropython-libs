@@ -33,6 +33,8 @@ software algorithms/abstractions.
 
 * ``ringbuffer`` - RingBuffer with builtin statistical methods.
 
+* ``uprofiler`` - Code profiling tools.
+
 Hardware Drivers
 ================
 These libraries contain drivers for specific hardware.

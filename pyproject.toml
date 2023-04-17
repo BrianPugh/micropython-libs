@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry>=1.2.0", "poetry-dynamic-versioning-plugin"]
+requires = ["poetry>=1.4.0", "poetry-dynamic-versioning-plugin"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry-dynamic-versioning]
@@ -20,7 +20,7 @@ packages = [{include = "lib"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-belay = "^0.18.0"
+belay = ">=0.18.0, <1.0.0"
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "~4.5.0"
@@ -29,15 +29,15 @@ sphinx_rtd_theme = "~1.0.0"
 [tool.poetry.group.dev.dependencies]
 coverage = {extras = ["toml"], version = "^5.1"}
 flake8 = "^4.0.1"
-ipdb = "^0.13.9"
-poetry-dynamic-versioning = "^0.16.0"
+ipdb = ">=0.13.9, <1.0.0"
+poetry-dynamic-versioning = ">=0.16.0, <1.0.0"
 pre_commit = "^2.16.0"
 pytest = "^7.1.2"
 pytest-cov = "^4.0.0"
 pytest-mock = "^3.7.0"
 matplotlib = "^3.6.1"
 numpy = "^1.23.4"
-pytest-skip-slow = "^0.0.3"
+pytest-skip-slow = ">=0.0.3, <1.0.0"
 micropython-rp2-stubs = "^1.19.1.post11"
 
 [tool.coverage.run]
@@ -98,3 +98,7 @@ reportMissingModuleSource = "none"  # for micropython stubs
 [tool.pytest.ini_options]
 pythonpath = "lib"
 addopts = "--cov-report=term-missing --cov=lib"
+
+
+[tool.belay.dependencies]
+uprofiler = {uri="lib/uprofiler.py", develop=true}
