@@ -5,6 +5,9 @@ _t_import = ticks_us()
 _BOLD = "\033[1m"
 _RESET = "\033[0m"
 
+# Default print period
+print_period = 1
+
 
 def _ticks_delta(t_start):
     return ticks_diff(ticks_us(), t_start)
@@ -36,8 +39,11 @@ class _Counter:
 class profile:
     """Function decorator and context manager profile."""
 
-    def __init__(self, f=None, *, name=None, print_period=1):
+    def __init__(self, f=None, *, name=None, print_period=None):
         self.name = name
+
+        if print_period is None:
+            print_period = globals()["print_period"]
         self.print_period = print_period
 
         self._f_init(f)

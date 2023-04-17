@@ -16,7 +16,9 @@ If a ``name`` is not provided, then it is set to the decorated function name.
 Decorated functions with the same name will overwrite each other's summary results.
 
 The optional ``print_period`` will control how often the decorator will print
-the call timings. Set to 0 to suppress all prints. Defaults to ``1`` (every call).
+the call timings. Set to 0 to suppress all prints. The **default** global
+print period can be configured via ``uprofiler.print_period``.
+Defaults to ``1`` (every call).
 
 
 .. code-block:: python
@@ -24,6 +26,8 @@ the call timings. Set to 0 to suppress all prints. Defaults to ``1`` (every call
     from time import sleep
 
     import uprofiler
+
+    uprofiler.print_period = 1  # Modifies global default
 
 
     @uprofiler.profile
