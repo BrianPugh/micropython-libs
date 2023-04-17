@@ -45,6 +45,9 @@ Defaults to ``1`` (every call).
         sleep(0.1)
 
 
+    with uprofiler.profile(name="context manager demo"):
+        sleep(0.123)
+
     foo()
 
     bar()
