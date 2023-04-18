@@ -32,5 +32,7 @@ baz()
 
 with uprofiler.profile(name="context manager demo"):
     sleep(0.123)
+with uprofiler.profile(name="context manager demo"):
+    sleep(0.05)
 
 uprofiler.print_results()

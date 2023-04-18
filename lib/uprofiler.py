@@ -16,8 +16,9 @@ def _ticks_delta(t_start):
 class _Counter:
     registry = {}
 
-    def __init__(self, name):
+    def __init__(self, name, print_period):
         self.name = name
+        self.print_period = print_period
         self.n = 0
         self.t_time_us = 0
 
@@ -35,17 +36,21 @@ class _Counter:
         t_time_ms = self.t_time_us / 1000
         return f"{self.name: 24.24} {self.n : >8} calls {t_time_ms:>12.3f}ms total {t_time_ms/self.n:>12.3f}ms average"
 
+    def print(self):
+        pp = self.print_period
+        if pp is None:
+            pp = print_period
+
+        if pp > 0 and self.n % pp == 0:
+            print(self)
+
 
 class profile:
     """Function decorator and context manager profile."""
 
     def __init__(self, f=None, *, name=None, print_period=None):
         self.name = name
-
-        if print_period is None:
-            print_period = globals()["print_period"]
         self.print_period = print_period
-
         self._f_init(f)
 
     def _f_init(self, f):
@@ -54,7 +59,7 @@ class profile:
             self.__name__ = f.__name__
             if self.name is None:
                 self.name = f.__name__
-            self.counter = _Counter(self.name)
+            self.counter = _Counter(self.name, self.print_period)
 
     def __call__(self, *args, **kwargs):
         if self.f is None:  # was originally called with decorator args
@@ -65,23 +70,22 @@ class profile:
         result = self.f(*args, **kwargs)
         delta = _ticks_delta(t_start)
         self.counter.record(delta)
-
-        if self.print_period > 0 and self.counter.n % self.print_period == 0:
-            print(self.counter)
+        self.counter.print()
 
         return result
 
     def __enter__(self):
-        self.counter = _Counter(self.name)
+        try:
+            self.counter = _Counter.registry[self.name]
+        except KeyError:
+            self.counter = _Counter(self.name, self.print_period)
         self.t_start_us = ticks_us()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         delta = _ticks_delta(self.t_start_us)
         self.counter.record(delta)
-
-        if self.print_period > 0:
-            print(self.counter)
+        self.counter.print()
 
 
 def _table_formatter(name, calls, total_pct, total_ms, avg_ms):
