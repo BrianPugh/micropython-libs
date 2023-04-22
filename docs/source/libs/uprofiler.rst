@@ -10,7 +10,7 @@ No dependencies
 
 profile
 ^^^^^^^
-The ``profile`` feature can be used as either a decorator, or a context manager.
+The ``profile`` decorator measures how long the function/method takes to execute.
 
 If a ``name`` is not provided, then it is set to the decorated function name.
 Decorated functions with the same name will overwrite each other's summary results.
@@ -24,7 +24,6 @@ Defaults to ``1`` (every call).
 .. code-block:: python
 
     from time import sleep
-
     import uprofiler
 
     uprofiler.print_period = 1  # Modifies global default
@@ -44,9 +43,6 @@ Defaults to ``1`` (every call).
     def baz():
         sleep(0.1)
 
-
-    with uprofiler.profile(name="context manager demo"):
-        sleep(0.123)
 
     foo()
 
@@ -90,7 +86,6 @@ The demo ``demos/uprofiler.py`` prints the following output:
     changed_bar_name                2 calls     1200.310ms total      600.155ms average
     baz                             3 calls      300.302ms total      100.101ms average
     baz                             6 calls      600.594ms total      100.099ms average
-    context manager demo            1 calls      123.190ms total      123.190ms average
 
     Total-time: 2184.748ms
     Name                        Calls    Total (%)     Total (ms)   Average (ms)
@@ -98,4 +93,3 @@ The demo ``demos/uprofiler.py`` prints the following output:
     changed_bar_name                2        54.94        1200.31        600.155
     baz                             6        27.49        600.594        100.099
     foo                             1        11.45        250.225        250.225
-    context manager demo            1         5.64         123.19         123.19

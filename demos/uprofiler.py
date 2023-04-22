@@ -3,6 +3,12 @@ from time import sleep
 import uprofiler
 
 
+class MyClass:
+    @uprofiler.profile
+    def foo_method(self):
+        sleep(0.05)
+
+
 @uprofiler.profile
 def foo():
     sleep(0.25)
@@ -18,6 +24,8 @@ def baz():
     sleep(0.1)
 
 
+MyClass().foo_method()
+
 foo()
 
 bar()
@@ -29,10 +37,5 @@ baz()
 baz()
 baz()
 baz()
-
-with uprofiler.profile(name="context manager demo"):
-    sleep(0.123)
-with uprofiler.profile(name="context manager demo"):
-    sleep(0.05)
 
 uprofiler.print_results()

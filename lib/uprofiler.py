@@ -45,47 +45,31 @@ class _Counter:
             print(self)
 
 
-class profile:
-    """Function decorator and context manager profile."""
+# Can't use class; micropython will have issues decorating methods then.
+def profile(f=None, *, name=None, print_period=None):
+    """Function/Method decorator."""
+    if f is None:
+        # decorated with arguments
+        return lambda x: profile(x, name=name, print_period=print_period)
 
-    def __init__(self, f=None, *, name=None, print_period=None):
-        self.name = name
-        self.print_period = print_period
-        self._f_init(f)
+    if name is None:
+        # TODO: I think micropython 1.20.0 will have __qualname__
+        name = f.__name__
 
-    def _f_init(self, f):
-        self.f = f
-        if f is not None:
-            self.__name__ = f.__name__
-            if self.name is None:
-                self.name = f.__name__
-            self.counter = _Counter(self.name, self.print_period)
+    try:
+        counter = _Counter.registry[name]
+    except KeyError:
+        counter = _Counter(name, print_period)
 
-    def __call__(self, *args, **kwargs):
-        if self.f is None:  # was originally called with decorator args
-            self._f_init(args[0])
-            return self
-
+    def inner(*args, **kwargs):
         t_start = ticks_us()
-        result = self.f(*args, **kwargs)
+        result = f(*args, **kwargs)
         delta = _ticks_delta(t_start)
-        self.counter.record(delta)
-        self.counter.print()
-
+        counter.record(delta)
+        counter.print()
         return result
 
-    def __enter__(self):
-        try:
-            self.counter = _Counter.registry[self.name]
-        except KeyError:
-            self.counter = _Counter(self.name, self.print_period)
-        self.t_start_us = ticks_us()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        delta = _ticks_delta(self.t_start_us)
-        self.counter.record(delta)
-        self.counter.print()
+    return inner
 
 
 def _table_formatter(name, calls, total_pct, total_ms, avg_ms):
