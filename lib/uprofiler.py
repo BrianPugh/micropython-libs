@@ -103,6 +103,6 @@ def print_results():
                 calls=counter.n,
                 total_pct=round(100 * t_counter_total_ms / t_total_ms, 2),
                 total_ms=t_counter_total_ms,
-                avg_ms=t_counter_total_ms / counter.n,
+                avg_ms=t_counter_total_ms / counter.n if counter.n else 0,
             )
         )
