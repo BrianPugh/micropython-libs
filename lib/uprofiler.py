@@ -73,7 +73,7 @@ def profile(f=None, *, name=None, print_period=None):
 
 
 def _table_formatter(name, calls, total_pct, total_ms, avg_ms):
-    return f"{name: 24.24} {calls: >8} {total_pct: >12} {total_ms: >14} {avg_ms: >14}"
+    return f"{name: 32.32} {calls: >8} {total_pct: >10} {total_ms: >13} {avg_ms: >13}"
 
 
 def print_results():
