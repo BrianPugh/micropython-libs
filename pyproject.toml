@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry>=1.4.0", "poetry-dynamic-versioning-plugin"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry-dynamic-versioning]
@@ -75,14 +75,6 @@ exclude_lines = [
     "if micropython:",
 ]
 
-[tool.bandit]
-exclude_dirs = [
-    "tests",
-    "demos",
-    "sim",
-    "tools",
-]
-
 [tool.pyright]
 extraPaths = [
     "./lib/",
@@ -102,3 +94,97 @@ addopts = "--cov-report=term-missing --cov=lib"
 
 [tool.belay.dependencies]
 uprofiler = {uri="lib/uprofiler.py", develop=true}
+
+[tool.ruff]
+target-version = 'py38'
+
+exclude = [
+    "migrations",
+    "__pycache__",
+    "manage.py",
+    "settings.py",
+    "env",
+    ".env",
+    "venv",
+    ".venv",
+]
+
+line-length = 120
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "D",  # pydocstyle
+    "E",  # Error
+    "F",  # pyflakes
+    "I",  # isort
+    "N",  # pep8-naming
+    "PGH",  # pygrep-hooks
+    "Q",  # flake8-quotes
+    "SIM",  # flake8-simplify
+    "TRY",  # tryceratops
+    "UP",  # pyupgrade
+    "W",  # Warning
+    "YTT", # flake8-2020
+]
+
+ignore = [
+    "B904",  # raise ... from ...
+    "B905",  # zip strict=True; remove once python <3.10 support is dropped.
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "D200",
+    "D401",
+    "E402",
+    "E501",
+    "F401",
+    "F821",  # Undefined name
+    "N818",  # Exceptions should end in Error
+    "SIM105",  # Use contextlib.suppress
+    "TRY002",  # Create your own exception
+    "TRY003",  # Avoid specifying messages outside exception class; overly strict, especially for ValueError
+]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "chr",
+    "typer.Argument",
+    "typer.Option",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = [
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "PGH001",  # use of "eval"
+]
+
+
+
+[tool.ruff.lint.pep8-naming]
+staticmethod-decorators = [
+    "pydantic.validator",
+    "pydantic.root_validator",
+]
+
+[tool.codespell]
+skip = 'poetry.lock,'

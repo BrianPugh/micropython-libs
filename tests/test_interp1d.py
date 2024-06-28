@@ -31,9 +31,7 @@ def test_searchsorted_even():
     assert interp1d.searchsorted(a, 14) == 4
 
 
-@pytest.mark.parametrize(
-    "v, expected", [(0, 0), (0.3, 12), (1.7, 33), (2.7, 44), (7, 33.3333), (13.0, 1)]
-)
+@pytest.mark.parametrize("v, expected", [(0, 0), (0.3, 12), (1.7, 33), (2.7, 44), (7, 33.3333), (13.0, 1)])
 def test_linear_interpolate(v, expected):
     x = [0, 1, 2, 3, 5, 8, 13]
     y = [0, 40, 30, 50, 20, 40, 1]
@@ -57,8 +55,8 @@ def test_linear_out_of_range_fill_value_clip():
     y = [0, 40, 30, 50, 20, 40, 1]
 
     interpolater = interp1d.Linear(x, y, fill_value="clip")
-    assert 0 == interpolater(-1)
-    assert 1 == interpolater(13.2)
+    assert interpolater(-1) == 0
+    assert interpolater(13.2) == 1
 
 
 def test_linear_out_of_range_fill_value_tuple():
@@ -66,8 +64,8 @@ def test_linear_out_of_range_fill_value_tuple():
     y = [0, 40, 30, 50, 20, 40, 1]
 
     interpolater = interp1d.Linear(x, y, fill_value=(-100, 100))
-    assert -100 == interpolater(-1)
-    assert 100 == interpolater(13.2)
+    assert interpolater(-1) == -100
+    assert interpolater(13.2) == 100
 
 
 def test_interpolater_mismatch_lens():

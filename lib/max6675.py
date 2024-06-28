@@ -16,6 +16,7 @@ Typical use:
         print(f"Temperature: {temperature_celsius}°C.")
         sleep(0.22)
 """
+
 import re
 
 import controlhal
@@ -67,9 +68,7 @@ class Max6675(controlhal.Sensor):
 
     default_period = 0.22
 
-    def __init__(
-        self, spi, cs, spi_preread_callback=None, baudrate=4_000_000, period=None
-    ):
+    def __init__(self, spi, cs, spi_preread_callback=None, baudrate=4_000_000, period=None):
         """Create a Max6675 thermocouple object.
 
         Parameters

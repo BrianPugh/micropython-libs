@@ -120,9 +120,7 @@ class PIDAutotune(Controller):
 
         self._state = PIDAutotune.STATE_OFF
         self._peaks = RingBuffer(5)  # sensor values at detected peaks
-        self._peak_timestamps = RingBuffer(
-            5, dtype="Q"
-        )  # timestamp in mS at detected peaks
+        self._peak_timestamps = RingBuffer(5, dtype="Q")  # timestamp in mS at detected peaks
 
         self._output = 0
         self._proposed_peak_type = 0
@@ -131,9 +129,9 @@ class PIDAutotune(Controller):
         self._ultimate_gain = 0
         self._ultimate_period = 0
 
-        self._output_range = _clamp(
-            self._initial_output + self.output_step, output_limits
-        ) - _clamp(self._initial_output - self.output_step, output_limits)
+        self._output_range = _clamp(self._initial_output + self.output_step, output_limits) - _clamp(
+            self._initial_output - self.output_step, output_limits
+        )
 
         super().__init__(setpoint=setpoint, period=period)
 
@@ -206,15 +204,9 @@ class PIDAutotune(Controller):
         self._last_action_time = now
 
         # check input and change relay state if necessary
-        if (
-            self._state == PIDAutotune.STATE_RELAY_STEP_UP
-            and input_val > self.setpoint + self.hysterisis
-        ):
+        if self._state == PIDAutotune.STATE_RELAY_STEP_UP and input_val > self.setpoint + self.hysterisis:
             self._state = PIDAutotune.STATE_RELAY_STEP_DOWN
-        elif (
-            self._state == PIDAutotune.STATE_RELAY_STEP_DOWN
-            and input_val < self.setpoint - self.hysterisis
-        ):
+        elif self._state == PIDAutotune.STATE_RELAY_STEP_DOWN and input_val < self.setpoint - self.hysterisis:
             self._state = PIDAutotune.STATE_RELAY_STEP_UP
 
         # set output
@@ -289,9 +281,7 @@ class PIDAutotune(Controller):
             ultimate_period = 0
             n_periods = len(self._peaks) - 2
             for i in range(0, n_periods):
-                ultimate_period += ticks_diff(
-                    self._peak_timestamps[i + 2], self._peak_timestamps[i]
-                )
+                ultimate_period += ticks_diff(self._peak_timestamps[i + 2], self._peak_timestamps[i])
             # Average period, convert milliseconds -> seconds
             ultimate_period /= 1000 * n_periods
             self._ultimate_period = ultimate_period

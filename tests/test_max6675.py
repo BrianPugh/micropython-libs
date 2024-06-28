@@ -14,7 +14,7 @@ def test_prev_baudrate():
 
 def test_interpret_buf():
     data = bytearray([0b0111_1111, 0b1111_1000])
-    assert 1023.75 == max6675._interpret_buf(data)
+    assert max6675._interpret_buf(data) == 1023.75
 
 
 def test_interpret_buf_open_thermocouple():

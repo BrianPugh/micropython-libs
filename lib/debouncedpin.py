@@ -41,6 +41,7 @@ program main loop:
             print("Button is pressed")
         time.sleep(1)
 """
+
 import micropython
 from machine import Pin, Timer
 
@@ -137,11 +138,10 @@ class DebouncedPin(Pin):
         self._last_val = val
         if consistent_read and val != self._val:
             self._val = val
-            if self._user_handler:
-                if (val and self._user_trigger & Pin.IRQ_RISING) or (
-                    not val and self._user_trigger & Pin.IRQ_FALLING
-                ):
-                    micropython.schedule(self._user_handler, self)
+            if self._user_handler and (
+                (val and self._user_trigger & Pin.IRQ_RISING) or (not val and self._user_trigger & Pin.IRQ_FALLING)
+            ):
+                micropython.schedule(self._user_handler, self)
 
 
 class DebouncedLedPin(DebouncedPin):

@@ -44,6 +44,7 @@ Typical usecase:
     while True:
         boiler()  # update feedback loop
 """
+
 try:
     from machine import Timer
     from utime import ticks_add, ticks_diff, ticks_ms
@@ -168,12 +169,8 @@ class Multi(Peripheral):
 
     def write(self, vals):
         if len(vals) != len(self.peripherals):
-            raise ValueError(
-                f"{len(vals)} values specified; expected {len(self.peripherals)}"
-            )
-        return tuple(
-            peripheral.write(val) for val, peripheral in zip(vals, self.peripherals)
-        )
+            raise ValueError(f"{len(vals)} values specified; expected {len(self.peripherals)}")
+        return tuple(peripheral.write(val) for val, peripheral in zip(vals, self.peripherals))
 
     @property
     def period(self):
@@ -186,9 +183,7 @@ class Multi(Peripheral):
     @setpoint.setter
     def setpoint(self, vals):
         if len(vals) != len(self.peripherals):
-            raise ValueError(
-                f"{len(vals)} values specified; expected {len(self.peripherals)}"
-            )
+            raise ValueError(f"{len(vals)} values specified; expected {len(self.peripherals)}")
         for val, peripheral in zip(vals, self.peripherals):
             peripheral.setpoint = val
 
@@ -315,19 +310,13 @@ class Derivative(Sensor):
 
             if self._val_buffer.full:
                 # Five-point stencil 1D Derivative Approximation
-                dt4 = sum(
-                    ticks_diff(time_buffer[i + 1], time_buffer[i])
-                    for i in range(len(time_buffer) - 1)
-                )
+                dt4 = sum(ticks_diff(time_buffer[i + 1], time_buffer[i]) for i in range(len(time_buffer) - 1))
 
                 # 5-point stencil has a denominator of 12h
                 # We sum the 4 time differences, so this becomes 3h
                 # To need to convert ms -> s, so this becomes 0.003h
                 self._last_read = (
-                    val_buffer[0]  # -2h
-                    - 8 * val_buffer[1]  # -1h
-                    + 8 * val_buffer[3]  # 1h
-                    - val_buffer[4]  # 2h
+                    val_buffer[0] - 8 * val_buffer[1] + 8 * val_buffer[3] - val_buffer[4]  # -2h  # -1h  # 1h  # 2h
                 ) / (0.003 * dt4)
 
         return self._last_read
@@ -450,10 +439,9 @@ class TimeProportionalActuator(Actuator):
         if self._counter == 0:
             # only activate on 0 to prevent rapid toggling if
             # setpoint is increased as ~same-rate as counter.
-            if self._counter < self._setpoint_100x:
-                if not self._last_action:
-                    self._raw_write(1)
-                    self._last_action = True
+            if self._counter < self._setpoint_100x and not self._last_action:
+                self._raw_write(1)
+                self._last_action = True
         else:
             if self._last_action and self._counter >= self._setpoint_100x:
                 self._raw_write(0)
@@ -650,11 +638,7 @@ class ControlLoop(Peripheral):
     def __eq__(self, other):
         if not isinstance(other, type(self)):
             return False
-        return (
-            self.actuator == other.actuator
-            and self.sensor == other.sensor
-            and self.controller == other.controller
-        )
+        return self.actuator == other.actuator and self.sensor == other.sensor and self.controller == other.controller
 
     def __call__(self, *args, **kwargs):
         """Update feedback loop.

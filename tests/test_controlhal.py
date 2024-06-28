@@ -19,7 +19,7 @@ def mock_time(mocker):
 
 def test_autotune_success():
     try:
-        raise AutotuneSuccess(parameters=(1, 2))
+        raise AutotuneSuccess(parameters=(1, 2))  # noqa: TRY301
     except AutotuneSuccess as e:
         assert e.parameters == (1, 2)
 
@@ -48,16 +48,16 @@ def test_sensor(mock_time):
     mock_time.time = 98
     test_sensor = TestSensor(period=0.01)  # 10 mS
 
-    assert 1 == test_sensor.read()
-    assert 1 == test_sensor.read()
+    assert test_sensor.read() == 1
+    assert test_sensor.read() == 1
 
     mock_time.time = 100  # mS
-    assert 1 == test_sensor.read()
+    assert test_sensor.read() == 1
 
     mock_time.time = 108  # mS
 
-    assert 2 == test_sensor.read()
-    assert 2 == test_sensor.read()
+    assert test_sensor.read() == 2
+    assert test_sensor.read() == 2
 
 
 def test_actuator_invalid_write():
@@ -105,18 +105,16 @@ def test_derivative(mock_time):
 
     # First 4 reads should return no derivative while
     # the buffer fills.
-    assert 0 == derivative.read()
+    assert derivative.read() == 0
     assert len(derivative._val_buffer) == 1
-    assert (
-        0 == derivative.read()
-    )  # Second read at same time should not increase buffer.
+    assert derivative.read() == 0  # Second read at same time should not increase buffer.
     assert len(derivative._val_buffer) == 1
     mock_time.time += 100
-    assert 0 == derivative.read()
+    assert derivative.read() == 0
     mock_time.time += 100
-    assert 0 == derivative.read()
+    assert derivative.read() == 0
     mock_time.time += 100
-    assert 0 == derivative.read()
+    assert derivative.read() == 0
     mock_time.time += 100
 
     val = derivative.read()
@@ -201,9 +199,7 @@ def test_time_proportional_actuator_basic(mocker, mock_timer, mock_time):
     actuator = TimeProportionalActuator(pin=pin, period=10)
     mock_timer.assert_called_once_with(-1)
     # configure timer to execute callback once every 10mS
-    actuator._timer.init.assert_called_once_with(
-        period=100, callback=actuator._timer_callback
-    )
+    actuator._timer.init.assert_called_once_with(period=100, callback=actuator._timer_callback)
 
     pin.assert_not_called()
     actuator.write(0.7)
@@ -234,9 +230,7 @@ def test_time_proportional_actuator_change(mocker, mock_timer, mock_time):
     actuator = TimeProportionalActuator(pin=pin, period=10)
     mock_timer.assert_called_once_with(-1)
     # configure timer to execute callback once every 10mS
-    actuator._timer.init.assert_called_once_with(
-        period=100, callback=actuator._timer_callback
-    )
+    actuator._timer.init.assert_called_once_with(period=100, callback=actuator._timer_callback)
 
     pin.assert_not_called()
     actuator.write(0.7)

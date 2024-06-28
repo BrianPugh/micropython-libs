@@ -38,9 +38,7 @@ class WaterTank:
         height = (volume * 1000) / (math.pi * math.pow(radius, 2))
 
         # surface in m^2
-        self._surface = (
-            2 * math.pi * math.pow(radius, 2) + 2 * math.pi * radius * height
-        ) / 10000
+        self._surface = (2 * math.pi * math.pow(radius, 2) + 2 * math.pi * radius * height) / 10000
 
     @property
     def temperature(self):
@@ -63,7 +61,7 @@ class WaterTank:
         efficiency: float
             Efficiency as number between 0 and 1.
         """
-        self._temp += self._get_deltaT(power * efficiency, duration)
+        self._temp += self._get_delta_t(power * efficiency, duration)
 
     def _cool(self, duration, ambient_temp=20, heat_loss_factor=1):
         """Make the content loose heat.
@@ -79,15 +77,11 @@ class WaterTank:
         """
         # Q = k_w * A * (T_boiler - T_ambient)
         # P = Q / t
-        power = (
-            self.THERMAL_CONDUCTIVITY_STEEL
-            * self._surface
-            * (self._temp - ambient_temp)
-        )
+        power = self.THERMAL_CONDUCTIVITY_STEEL * self._surface * (self._temp - ambient_temp)
 
         # W to kW
         power /= 1000
-        self._temp -= self._get_deltaT(power, duration) * heat_loss_factor
+        self._temp -= self._get_delta_t(power, duration) * heat_loss_factor
 
     def heat_cool(self, power, duration, heat_loss_factor=1):
         self._heat(power, duration)
@@ -98,5 +92,5 @@ class WaterTank:
 
         return self._delay_temp
 
-    def _get_deltaT(self, power, duration):
+    def _get_delta_t(self, power, duration):
         return (power * duration) / (self.SPECIFIC_HEAT_CAP_WATER * self._mass)

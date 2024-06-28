@@ -69,10 +69,7 @@ class RingBuffer:
         if len(self) != len(other):
             return False
 
-        for x, y in zip(self, other):
-            if x != y:
-                return False
-        return True
+        return all(x == y for x, y in zip(self, other))
 
     @property
     def max_size(self):

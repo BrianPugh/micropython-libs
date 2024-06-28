@@ -68,7 +68,6 @@ def test_pid_basic(mock_time, assert_array_equal):
     _plot_simulation(ts, power_percents, water_temperatures, targets)
     assert_array_equal(np.array([ts, water_temperatures, power_percents]).transpose())
 
-    controller.components
     controller.parameters = 1.0, 0.1, 0.0
 
 

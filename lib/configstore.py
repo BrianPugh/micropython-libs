@@ -8,6 +8,7 @@
 Example::
 
     from configstore import ConfigStore
+
     config = ConfigStore("settings.json")  # Creates file if it doesn't exist.
     config["foo1"] = "bar1"  # Simple key/value store
     config["list_example"] = [1, 2, 3]  # lists work
@@ -27,15 +28,19 @@ Example::
 Typical Usecase::
 
     from configstore import ConfigStore
+
     config = ConfigStore("settings.json")
-    config.merge({  # Populates unpopulated elements with default parameters.
-        "name": "UNKNOWN",
-        "id": 1234,
-    })
+    config.merge(
+        {  # Populates unpopulated elements with default parameters.
+            "name": "UNKNOWN",
+            "id": 1234,
+        }
+    )
     config.freeze_schema()
 
     print(f"Hello {config['name']}")
 """
+
 import json
 import os
 
@@ -102,8 +107,7 @@ class WatchBase:
         return value in self.data
 
     def __iter__(self):
-        for val in self.data:
-            yield val
+        yield from self.data
 
     def __getitem__(self, key):
         return self.data[key]
@@ -142,11 +146,7 @@ class WatchBase:
             return self.data == other
 
     def _process_value(self, value):
-        if isinstance(value, (bool, int, float, str)):
-            # Do nothing
-            pass
-        elif isinstance(value, WatchBase):
-            # Do nothing
+        if isinstance(value, (bool, int, float, str, WatchBase)):
             pass
         elif isinstance(value, (dict, list, tuple)):
             value = self.from_data(value, parent=self)
@@ -205,11 +205,11 @@ class WatchBase:
 def _common_merge(key, existing_val, other_val, strategy):
     if isinstance(existing_val, WatchDict):
         if not isinstance(other_val, (dict, WatchDict)):
-            raise ValueError(f'Existing value for index "{key}" is not expected dict.')
+            raise TypeError(f'Existing value for index "{key}" is not expected dict.')
         existing_val.merge(other_val, strategy=strategy)
     elif isinstance(existing_val, WatchList):
         if not isinstance(other_val, (list, WatchList)):
-            raise ValueError(f'Existing value for index "{key}" is not expected list.')
+            raise TypeError(f'Existing value for index "{key}" is not expected list.')
         existing_val.merge(other_val, strategy=strategy)
 
 
@@ -267,8 +267,7 @@ class WatchDict(WatchBase):
         return self.data.values()
 
     def items(self):
-        for item in self.data.items():
-            yield item
+        yield from self.data.items()
 
     def update(self, d):
         """Overwrite (possibly) existing entries with contents of ``d``."""
@@ -289,9 +288,7 @@ class WatchDict(WatchBase):
             raise NotImplementedError
 
     def to_data(self):
-        return {
-            k: v.to_data() if isinstance(v, WatchBase) else v for k, v in self.items()
-        }
+        return {k: v.to_data() if isinstance(v, WatchBase) else v for k, v in self.items()}
 
 
 class ConfigStore(WatchDict):
@@ -310,7 +307,7 @@ class ConfigStore(WatchDict):
         self.filename = filename
 
         try:
-            with open(filename, "r") as f:
+            with open(filename) as f:
                 data = json.load(f)
         except OSError:
             data = {}
@@ -325,9 +322,9 @@ class ConfigStore(WatchDict):
 
     def __setitem__(self, key, value):
         if not isinstance(key, str):
-            raise ValueError(f"Not allowed key datatype: {type(value)}")
+            raise TypeError(f"Not allowed key datatype: {type(value)}")
         if not isinstance(value, (bool, int, float, str, tuple, list, dict, WatchBase)):
-            raise ValueError(f"Not allowed value datatype: {type(value)}")
+            raise TypeError(f"Not allowed value datatype: {type(value)}")
 
         super().__setitem__(key, value)
 

@@ -194,13 +194,13 @@ def test_incompatible_merge_dict():
     wd = WatchDict()
     assert wd.modified is False
     wd["foo1"] = {"bar1": {"baz1": "bop1"}}
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         wd.merge({"foo1": 5})
 
 
 def test_incompatible_merge_list():
     wl = WatchList([1, 2, ["a", "b"]])
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         wl.merge([4, 5, 6])
 
 
@@ -436,14 +436,14 @@ def test_freeze_schema_non_recursive(mocker, tmp_path):
 def test_config_store_incompatible_value_type(tmp_path):
     config_fn = tmp_path / "config.json"
     config = ConfigStore(config_fn)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         config["foo"] = b"bytes"
 
 
 def test_config_store_incompatible_key_type(tmp_path):
     config_fn = tmp_path / "config.json"
     config = ConfigStore(config_fn)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         config[5] = b"bytes"
 
 

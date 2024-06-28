@@ -133,22 +133,14 @@ class PID(Controller):
         dt = ticks_diff(now, self._last_action_time)
         dt /= 1000  # dt is now in seconds
 
-        if (
-            self.period is not None
-            and dt < self.period
-            and self._last_output is not None
-        ):
+        if self.period is not None and dt < self.period and self._last_output is not None:
             # Only update every period seconds
             return self._last_output
 
         # Compute error terms
         error = self.setpoint - input_
-        d_input = input_ - (
-            self._last_input if (self._last_input is not None) else input_
-        )
-        d_error = error - (
-            self._last_error if (self._last_error is not None) else error
-        )
+        d_input = input_ - (self._last_input if (self._last_input is not None) else input_)
+        d_error = error - (self._last_error if (self._last_error is not None) else error)
 
         # Compute the proportional term
         if not self.proportional_on_measurement:
@@ -162,9 +154,7 @@ class PID(Controller):
         # Compute integral and derivative terms
         if self._last_output is not None:
             self._integral += self.k_i * error * dt
-            self._integral = _clamp(
-                self._integral, self.output_limits
-            )  # Avoid integral windup
+            self._integral = _clamp(self._integral, self.output_limits)  # Avoid integral windup
 
             if self.differetial_on_measurement:
                 self._derivative = -self.k_d * d_input / dt
@@ -190,14 +180,14 @@ class PID(Controller):
 
     def __repr__(self):
         return (
-            "{self.__class__.__name__}("
-            "Kp={self.k_p!r}, Ki={self.k_i!r}, Kd={self.k_d!r}, "
-            "setpoint={self.setpoint!r}, period={self.period!r}, "
-            "output_limits={self.output_limits!r}, auto_mode={self.auto_mode!r}, "
-            "proportional_on_measurement={self.proportional_on_measurement!r}, "
-            "differetial_on_measurement={self.differetial_on_measurement!r} "
+            f"{self.__class__.__name__}("
+            f"Kp={self.k_p!r}, Ki={self.k_i!r}, Kd={self.k_d!r}, "
+            f"setpoint={self.setpoint!r}, period={self.period!r}, "
+            f"output_limits={self.output_limits!r}, auto_mode={self.auto_mode!r}, "
+            f"proportional_on_measurement={self.proportional_on_measurement!r}, "
+            f"differetial_on_measurement={self.differetial_on_measurement!r} "
             ")"
-        ).format(self=self)
+        )
 
     @property
     def components(self):

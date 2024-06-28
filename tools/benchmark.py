@@ -9,6 +9,7 @@ were worth additional API complexity.
 | rp2040       | 131,257 | 138,091 | 46,362  | 47,160      | 227,841     |
 +--------------+---------+---------+---------+-------------+-------------+
 """
+
 import argparse
 from pathlib import Path
 
@@ -136,7 +137,7 @@ def gpio_toggle():
 
     t_start = time.ticks_us()
 
-    pin = Pin(25, Pin.OUT)
+    pin = Pin(25, Pin.OUT)  # noqa: F821
     for _ in range(100_000):
         pin.on()
         pin.off()

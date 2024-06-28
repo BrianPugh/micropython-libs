@@ -107,9 +107,7 @@ def main(mock_time):
     def update(val):
         controller.reset()
         controller.parameters = (slider_p.val, slider_i.val, slider_d.val)
-        ts, power_percents, water_temperatures, targets = _simulate(
-            mock_time, controller
-        )
+        ts, power_percents, water_temperatures, targets = _simulate(mock_time, controller)
         plot_temp.set_ydata(water_temperatures)
         plot_power.set_ydata(power_percents)
         fig.canvas.draw_idle()
