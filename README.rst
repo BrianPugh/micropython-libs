@@ -1,4 +1,4 @@
-|Python compat| |PyPi| |GHA tests| |Codecov report| |readthedocs|
+|Python compat| |GHA tests| |Codecov report| |readthedocs|
 
 .. inclusion-marker-do-not-remove
 
@@ -100,8 +100,6 @@ Repo Folder Structure
    :target: https://codecov.io/github/BrianPugh/micropython-libs?branch=main
    :alt: Coverage
 .. |Python compat| image:: https://img.shields.io/badge/>=python-3.8-blue.svg
-.. |PyPi| image:: https://img.shields.io/pypi/v/libs.svg
-        :target: https://pypi.python.org/pypi/libs
 .. _docs/hardware: docs/hardware_spec.rst
 .. |readthedocs| image:: https://readthedocs.org/projects/micropython-libs-brianpugh/badge/?version=latest
         :target: https://micropython-libs-brianpugh.readthedocs.io/en/latest/?badge=latest
