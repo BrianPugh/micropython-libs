@@ -232,6 +232,5 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-/poetry.lock
 tests/**/*_actual.*
 *.lprof

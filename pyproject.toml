@@ -23,16 +23,18 @@ python = "^3.10"
 belay = ">=0.18.0, <1.0.0"
 
 [tool.poetry.group.docs.dependencies]
-sphinx = "~4.5.0"
-sphinx_rtd_theme = "~1.0.0"
+sphinx = "~7.1.2"
+sphinx_rtd_theme = "~2.0.0"
+gitpython = ">=3.1.31"
+sphinx-copybutton = "^0.5.2"
 
 [tool.poetry.group.dev.dependencies]
 coverage = {extras = ["toml"], version = "^5.1"}
 flake8 = "^4.0.1"
 ipdb = ">=0.13.9, <1.0.0"
 poetry-dynamic-versioning = ">=0.16.0, <1.0.0"
-pre_commit = "^2.16.0"
-pytest = "^7.1.2"
+pre_commit = ">=2.16.0"
+pytest = ">=7.1.2"
 pytest-cov = "^4.0.0"
 pytest-mock = "^3.7.0"
 matplotlib = "^3.6.1"

@@ -5,13 +5,19 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 # -- Path setup --------------------------------------------------------------
-
-import os
+import importlib
+import inspect
 import sys
 from datetime import date
+from pathlib import Path
 
-sys.path.insert(0, os.path.abspath("../.."))
+import git
 
+sys.path.insert(0, str(Path("../..").absolute()))
+
+
+git_repo = git.Repo(".", search_parent_directories=True)  # type: ignore[reportPrivateImportUsage]
+git_commit = git_repo.head.commit
 
 # -- Project information -----------------------------------------------------
 
@@ -28,6 +34,8 @@ extensions = [
     "sphinx_rtd_theme",
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinx.ext.linkcode",
+    "sphinx_copybutton",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -56,6 +64,66 @@ napoleon_preprocess_types = False
 napoleon_type_aliases = None
 napoleon_attr_annotations = True
 
+# Autodoc
+autodoc_default_options = {
+    "members": True,
+    "member-order": "bysource",
+    "undoc-members": True,
+    "exclude-members": "__weakref__",
+}
+autoclass_content = "init"
+
+# LinkCode
+code_url = f"https://github.com/GIT_USERNAME/GIT_REPONAME/blob/{git_commit}"
+
+
+def linkcode_resolve(domain, info):
+    """Link code to github.
+
+    Modified from:
+        https://github.com/python-websockets/websockets/blob/778a1ca6936ac67e7a3fe1bbe585db2eafeaa515/docs/conf.py#L100-L134
+    """
+    # Non-linkable objects from the starter kit in the tutorial.
+    if domain == "js":
+        return
+
+    if domain != "py":
+        raise ValueError("expected only Python objects")
+
+    if not info.get("module"):
+        # Documented via py:function::
+        return
+
+    mod = importlib.import_module(info["module"])
+    if "." in info["fullname"]:
+        objname, attrname = info["fullname"].split(".")
+        obj = getattr(mod, objname)
+        try:
+            # object is a method of a class
+            obj = getattr(obj, attrname)
+        except AttributeError:
+            # object is an attribute of a class
+            return None
+    else:
+        obj = getattr(mod, info["fullname"])
+
+    try:
+        file = inspect.getsourcefile(obj)
+        lines = inspect.getsourcelines(obj)
+    except TypeError:
+        # e.g. object is a typing.Union
+        return None
+    if file is None:
+        return None
+    file = Path(file).resolve().relative_to(git_repo.working_dir)
+    if file.parts[0] != "pythontemplate":
+        # e.g. object is a typing.NewType
+        return None
+    start, end = lines[1], lines[1] + len(lines[0]) - 1
+
+    return f"{code_url}/{file}#L{start}-L{end}"
+
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -80,13 +148,22 @@ html_theme_options = {
     "prev_next_buttons_location": "bottom",
     "style_external_links": False,
     "vcs_pageview_mode": "",
-    # "style_nav_header_background": "white",
+    "style_nav_header_background": "white",
     # Toc options
     "collapse_navigation": True,
     "sticky_navigation": True,
     "navigation_depth": 4,
     "includehidden": True,
     "titles_only": False,
+}
+
+html_context = {
+    # Github options
+    "display_github": True,
+    "github_user": "BrianPugh",
+    "github_repo": "micropython-libs",
+    "github_version": "main",
+    "conf_py_path": "/docs/source/",
 }
 
 html_css_files = [
