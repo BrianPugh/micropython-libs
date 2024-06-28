@@ -42,6 +42,8 @@ Whenever possible, these drivers abide by the standards in `docs/hardware`_.
 
 * ``max6675`` - MAX6675 Cold-Junction-Compensated K-Thermocouple-to-Digital Converter (0°C to +1024°C).
 
+* ``in13`` - `IN13 Nixie Tube Indicator with I2C Driver board. <https://www.tindie.com/products/eclipsevl/in-13-bargraph-nixie-tube-with-driver-and-dc-dc/?pt=ac_prod_search>`_
+
 Installation
 ============
 We recommend using the `Belay Package Manager`_ for installing desired libraries.
