@@ -86,7 +86,7 @@ class DebouncedPin(Pin):
             Defaults to 20 milliseconds.
         """
         super().__init__(id, Pin.IN)
-        self.init(pull=pull, value=value)
+        self.init(pull=pull, mode=Pin.IN, value=value)
 
         self._last_val = super().value()  # last input read
         self._val = self._last_val  # Current steady-state input
