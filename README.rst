@@ -10,6 +10,8 @@ a micropython target.
 
 All micropython libraries are located in the ``lib/`` folder of this repo.
 
+`See docs here. <https://micropython-libs-brianpugh.readthedocs.io>`_
+
 Generic Libraries
 =================
 These libraries generally don't depend on specific hardware and primarily contain just
